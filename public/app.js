@@ -77,6 +77,7 @@ const els = {
 
 let lastAssistantText = "";
 let audioCapture = null;
+let currentAudio = null;
 
 init();
 
@@ -104,10 +105,10 @@ els.form.addEventListener("submit", async (event) => {
   await runCheckin();
 });
 
-els.positiveDemo.addEventListener("click", () => setDemo("positive"));
-els.yellowDemo.addEventListener("click", () => setDemo("yellow"));
-els.redDemo.addEventListener("click", () => setDemo("red"));
-els.speakBtn.addEventListener("click", speakAssistant);
+els.positiveDemo.addEventListener("click", () => runDemo("positive"));
+els.yellowDemo.addEventListener("click", () => runDemo("yellow"));
+els.redDemo.addEventListener("click", () => runDemo("red"));
+els.speakBtn.addEventListener("click", () => speakAssistant({ manual: true }));
 els.listenBtn.addEventListener("click", startVoice);
 els.resetHistory.addEventListener("click", resetHistory);
 els.patientId.addEventListener("change", loadHistory);
@@ -115,6 +116,11 @@ els.patientId.addEventListener("change", loadHistory);
 function setDemo(kind) {
   els.phase.value = demos[kind].phase;
   els.transcript.value = demos[kind].transcript;
+}
+
+async function runDemo(kind) {
+  setDemo(kind);
+  await runCheckin();
 }
 
 async function runCheckin() {
@@ -135,6 +141,7 @@ async function runCheckin() {
     });
     renderResult(data);
     els.transcript.value = "";
+    speakAssistant({ manual: false });
   } catch (error) {
     addMessage("assistant", "System", error.message);
   } finally {
@@ -280,7 +287,7 @@ function renderTimelineFromPhase(phase) {
 
 async function startVoice() {
   if (audioCapture) {
-    await stopPcmRecording();
+    await stopPcmRecording({ autoSubmit: false });
     return;
   }
   try {
@@ -290,24 +297,58 @@ async function startVoice() {
     const processor = context.createScriptProcessor(4096, 1, 1);
     const chunks = [];
 
+    const vad = {
+      speechStarted: false,
+      lastVoiceAt: 0,
+      startedAt: performance.now(),
+      silenceMs: 1100,
+      maxMs: 12000,
+      energyThreshold: 0.012,
+      stopping: false
+    };
+
     processor.onaudioprocess = (event) => {
-      chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+      const data = event.inputBuffer.getChannelData(0);
+      chunks.push(new Float32Array(data));
+
+      let sum = 0;
+      for (let i = 0; i < data.length; i++) sum += data[i] * data[i];
+      const rms = Math.sqrt(sum / data.length);
+      const now = performance.now();
+
+      if (rms > vad.energyThreshold) {
+        vad.lastVoiceAt = now;
+        if (!vad.speechStarted) {
+          vad.speechStarted = true;
+          els.voiceStatus.textContent = "Listening...";
+        }
+      }
+
+      if (vad.stopping) return;
+      const elapsed = now - vad.startedAt;
+      const silenceFor = vad.speechStarted ? now - vad.lastVoiceAt : 0;
+
+      if ((vad.speechStarted && silenceFor > vad.silenceMs) || elapsed > vad.maxMs) {
+        vad.stopping = true;
+        stopPcmRecording({ autoSubmit: true });
+      }
     };
 
     source.connect(processor);
     processor.connect(context.destination);
-    audioCapture = { context, source, processor, stream, chunks, sampleRate: context.sampleRate };
+    audioCapture = { context, source, processor, stream, chunks, sampleRate: context.sampleRate, vad };
     els.listenBtn.classList.add("recording");
     els.body.dataset.voice = "recording";
-    els.voiceStatus.textContent = "Recording... click again to stop";
+    els.voiceStatus.textContent = "Speak now (auto-stop on silence)";
   } catch (error) {
     els.voiceStatus.textContent = "Microphone unavailable";
     alert(`Microphone failed: ${error.message}`);
   }
 }
 
-async function stopPcmRecording() {
+async function stopPcmRecording({ autoSubmit = false } = {}) {
   const capture = audioCapture;
+  if (!capture) return;
   audioCapture = null;
 
   capture.processor.disconnect();
@@ -318,6 +359,12 @@ async function stopPcmRecording() {
   els.listenBtn.classList.remove("recording");
   els.body.dataset.voice = "thinking";
   els.voiceStatus.textContent = "Transcribing with Gradium...";
+
+  if (!capture.vad?.speechStarted) {
+    els.body.dataset.voice = "ready";
+    els.voiceStatus.textContent = "No speech detected. Click to retry.";
+    return;
+  }
 
   const pcm = encodePcm16(resampleTo24k(flattenFloat32(capture.chunks), capture.sampleRate));
   const stt = await fetchJson("/api/transcribe", {
@@ -332,26 +379,67 @@ async function stopPcmRecording() {
   if (stt.transcript) {
     els.transcript.value = stt.transcript;
     els.body.dataset.voice = "ready";
-    els.voiceStatus.textContent = `Transcript captured via ${stt.provider}`;
+    els.voiceStatus.textContent = `Heard: "${stt.transcript.slice(0, 60)}"`;
+    if (autoSubmit) {
+      await runCheckin();
+    }
   } else {
     els.body.dataset.voice = "ready";
     els.voiceStatus.textContent = stt.error || "No transcript captured";
   }
 }
 
-async function speakAssistant() {
+async function speakAssistant({ manual = false } = {}) {
   if (!lastAssistantText) return;
-  const tts = await fetchJson("/api/speak", {
-    method: "POST",
-    body: JSON.stringify({ text: lastAssistantText })
+  if (currentAudio) {
+    try { currentAudio.pause(); } catch {}
+    currentAudio = null;
+  }
+  const prevStatus = els.voiceStatus.textContent;
+  els.voiceStatus.textContent = "Synthesising voice...";
+  let tts;
+  try {
+    tts = await fetchJson("/api/speak", {
+      method: "POST",
+      body: JSON.stringify({ text: lastAssistantText })
+    });
+  } catch (error) {
+    els.voiceStatus.textContent = manual ? `TTS failed: ${error.message}` : prevStatus;
+    return;
+  }
+
+  const playAudio = (src) => new Promise((resolve) => {
+    const audio = new Audio(src);
+    currentAudio = audio;
+    audio.addEventListener("ended", resolve, { once: true });
+    audio.addEventListener("error", resolve, { once: true });
+    const playPromise = audio.play();
+    if (playPromise && typeof playPromise.catch === "function") {
+      playPromise.catch(() => resolve());
+    }
+    els.voiceStatus.textContent = "MATERNAL ai speaking...";
+    els.body.dataset.voice = "speaking";
   });
 
-  if (tts.audioUrl) {
-    new Audio(tts.audioUrl).play();
-  } else if (tts.audioBase64) {
-    new Audio(`data:${tts.mimeType || "audio/mpeg"};base64,${tts.audioBase64}`).play();
-  } else if ("speechSynthesis" in window) {
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(lastAssistantText));
+  try {
+    if (tts.audioUrl) {
+      await playAudio(tts.audioUrl);
+    } else if (tts.audioBase64) {
+      await playAudio(`data:${tts.mimeType || "audio/wav"};base64,${tts.audioBase64}`);
+    } else if ("speechSynthesis" in window) {
+      els.voiceStatus.textContent = "MATERNAL ai speaking...";
+      els.body.dataset.voice = "speaking";
+      await new Promise((resolve) => {
+        const u = new SpeechSynthesisUtterance(lastAssistantText);
+        u.onend = resolve;
+        u.onerror = resolve;
+        window.speechSynthesis.speak(u);
+      });
+    }
+  } finally {
+    currentAudio = null;
+    els.body.dataset.voice = "ready";
+    els.voiceStatus.textContent = "Voice ready";
   }
 }
 

@@ -1,0 +1,76 @@
+<svg width="1200" height="690" viewBox="0 0 1200 690" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">MATERNAL ai prototype system architecture</title>
+  <desc id="desc">A pipeline diagram showing browser voice capture, Gradium STT and TTS, OpenAI structured triage, patient memory, guardrails, and doctor escalation.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="690" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06100B"/>
+      <stop offset="1" stop-color="#22150F"/>
+    </linearGradient>
+    <marker id="arrow" markerWidth="12" markerHeight="12" refX="9" refY="6" orient="auto" markerUnits="strokeWidth">
+      <path d="M2 2L10 6L2 10V2Z" fill="#93FFBC"/>
+    </marker>
+    <style>
+      .box { fill: rgba(255,255,255,0.08); stroke: rgba(255,255,255,0.14); stroke-width: 1.4; }
+      .title { fill: #FFFFFF; font: 800 22px Arial, sans-serif; }
+      .text { fill: #C6D9CE; font: 16px Arial, sans-serif; }
+      .label { fill: #93FFBC; font: 700 14px Arial, sans-serif; letter-spacing: 2px; }
+      .line { stroke: #93FFBC; stroke-width: 3; stroke-linecap: round; marker-end: url(#arrow); }
+      .warn { fill: #FFB38E; }
+    </style>
+  </defs>
+  <rect width="1200" height="690" rx="42" fill="url(#bg)"/>
+  <text x="64" y="76" class="label">PROTOTYPE ARCHITECTURE</text>
+  <text x="64" y="124" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="40" font-weight="800">Voice first, protocol bound, history aware.</text>
+  <g>
+    <rect class="box" x="64" y="188" width="240" height="132" rx="26"/>
+    <text class="title" x="94" y="237">Desktop portal</text>
+    <text class="text" x="94" y="274">One-click voice start</text>
+    <text class="text" x="94" y="299">Auto listen and silence detect</text>
+  </g>
+  <g>
+    <rect class="box" x="392" y="188" width="240" height="132" rx="26"/>
+    <text class="title" x="422" y="237">Gradium STT</text>
+    <text class="text" x="422" y="274">Raw PCM audio</text>
+    <text class="text" x="422" y="299">Speech to transcript</text>
+  </g>
+  <g>
+    <rect class="box" x="720" y="188" width="240" height="132" rx="26"/>
+    <text class="title" x="750" y="237">OpenAI LLM</text>
+    <text class="text" x="750" y="274">Structured JSON only</text>
+    <text class="text" x="750" y="299">Phase-aware response</text>
+  </g>
+  <g>
+    <rect class="box" x="720" y="404" width="240" height="132" rx="26"/>
+    <text class="title" x="750" y="453">Memory store</text>
+    <text class="text" x="750" y="490">Patient history</text>
+    <text class="text" x="750" y="515">Mood and symptom trend</text>
+  </g>
+  <g>
+    <rect class="box" x="392" y="404" width="240" height="132" rx="26"/>
+    <text class="title" x="422" y="453">Guardrails</text>
+    <text class="text" x="422" y="490">Green / yellow / red</text>
+    <text class="text" x="422" y="515">Emergency overrides</text>
+  </g>
+  <g>
+    <rect class="box" x="64" y="404" width="240" height="132" rx="26"/>
+    <text class="title" x="94" y="453">Gradium TTS</text>
+    <text class="text" x="94" y="490">Assistant talks back</text>
+    <text class="text" x="94" y="515">Then listening resumes</text>
+  </g>
+  <g>
+    <rect x="980" y="298" width="156" height="132" rx="26" fill="#FFB38E" fill-opacity="0.14" stroke="#FFB38E" stroke-opacity="0.45" stroke-width="1.4"/>
+    <text x="1010" y="347" class="title">Doctor</text>
+    <text x="1010" y="384" class="text">Escalation</text>
+    <text x="1010" y="409" class="text">summary</text>
+  </g>
+  <path class="line" d="M304 254H380"/>
+  <path class="line" d="M632 254H708"/>
+  <path class="line" d="M840 320V391"/>
+  <path class="line" d="M720 470H644"/>
+  <path class="line" d="M392 470H316"/>
+  <path class="line" d="M184 404V333"/>
+  <path class="line" d="M960 254C1012 260 1038 276 1058 298"/>
+  <path class="line" d="M960 470C1016 458 1046 444 1068 430"/>
+  <rect x="64" y="586" width="1072" height="48" rx="24" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.1"/>
+  <text x="96" y="617" fill="#DDFEE6" font-family="Arial, sans-serif" font-size="17">The red path creates a concise medical summary instead of forcing a clinician to read months of chat logs.</text>
+</svg>

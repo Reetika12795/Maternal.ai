@@ -7,6 +7,20 @@
     <link rel="stylesheet" href="/styles.css" />
   </head>
   <body>
+    <section id="voiceGate" class="voice-gate">
+      <div class="gate-orb" aria-hidden="true">
+        <span></span>
+      </div>
+      <p class="eyebrow">Voice-first session</p>
+      <h1>MATERNAL ai will talk first.</h1>
+      <p>
+        Start the session once to allow microphone and audio. After that, the agent will ask questions,
+        listen automatically, transcribe with Gradium, and speak responses back.
+      </p>
+      <button type="button" id="startVoiceSession" class="primary gate-button">Start voice check-in</button>
+      <small>Browsers require one click before microphone access or voice playback can begin.</small>
+    </section>
+
     <main class="desktop-shell">
       <nav class="topbar">
         <div class="brand-mark animated-logo">MA</div>
@@ -107,14 +121,14 @@
           <section class="voice-stage slim">
             <button type="button" id="listenBtn" class="mic-orb" aria-label="Record voice check-in">
               <span class="mic-icon">●</span>
-              <span>Click to record</span>
+              <span>Voice session</span>
             </button>
             <div class="signal-stack" aria-hidden="true">
               <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
             </div>
             <div class="voice-copy">
               <strong id="voiceStatus">Voice standby</strong>
-              <p>Gradium STT captures the mother’s voice; Gradium TTS can speak the response.</p>
+              <p>Once started, MATERNAL ai speaks, listens, detects silence, and responds automatically.</p>
             </div>
           </section>
 

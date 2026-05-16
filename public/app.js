@@ -48,6 +48,8 @@ const demos = {
 const els = {
   mode: document.querySelector("#mode"),
   integrations: document.querySelector("#integrations"),
+  voiceGate: document.querySelector("#voiceGate"),
+  startVoiceSession: document.querySelector("#startVoiceSession"),
   checkinCount: document.querySelector("#checkinCount"),
   highestRisk: document.querySelector("#highestRisk"),
   latestMood: document.querySelector("#latestMood"),
@@ -77,6 +79,8 @@ const els = {
 
 let lastAssistantText = "";
 let audioCapture = null;
+let voiceSessionEnabled = false;
+let isProcessingTurn = false;
 
 init();
 
@@ -109,6 +113,7 @@ els.yellowDemo.addEventListener("click", () => setDemo("yellow"));
 els.redDemo.addEventListener("click", () => setDemo("red"));
 els.speakBtn.addEventListener("click", speakAssistant);
 els.listenBtn.addEventListener("click", startVoice);
+els.startVoiceSession.addEventListener("click", startVoiceFirstSession);
 els.resetHistory.addEventListener("click", resetHistory);
 els.patientId.addEventListener("change", loadHistory);
 
@@ -119,10 +124,11 @@ function setDemo(kind) {
 
 async function runCheckin() {
   const transcript = els.transcript.value.trim();
-  if (!transcript) return;
+  if (!transcript || isProcessingTurn) return;
 
   addMessage("user", "Mother", transcript);
   setLoading(true);
+  isProcessingTurn = true;
 
   try {
     const data = await fetchJson("/api/checkin", {
@@ -138,6 +144,7 @@ async function runCheckin() {
   } catch (error) {
     addMessage("assistant", "System", error.message);
   } finally {
+    isProcessingTurn = false;
     setLoading(false);
   }
 }
@@ -176,6 +183,21 @@ function renderResult(data) {
   }, null, 2);
 
   renderMemory(data.memory);
+
+  if (voiceSessionEnabled) {
+    speakText(result.assistantText, { resumeListening: result.triage !== "red" });
+  }
+}
+
+async function startVoiceFirstSession() {
+  voiceSessionEnabled = true;
+  els.voiceGate.classList.add("hidden");
+  els.body.dataset.voice = "speaking";
+
+  const greeting = buildGreeting();
+  lastAssistantText = greeting;
+  addMessage("assistant", "MATERNAL ai", greeting);
+  await speakText(greeting, { resumeListening: true });
 }
 
 async function loadHistory() {
@@ -279,6 +301,7 @@ function renderTimelineFromPhase(phase) {
 }
 
 async function startVoice() {
+  voiceSessionEnabled = true;
   if (audioCapture) {
     await stopPcmRecording();
     return;
@@ -289,9 +312,32 @@ async function startVoice() {
     const source = context.createMediaStreamSource(stream);
     const processor = context.createScriptProcessor(4096, 1, 1);
     const chunks = [];
+    const startedAt = performance.now();
+    let startedSpeaking = false;
+    let silenceStartedAt = null;
+    let stopped = false;
 
     processor.onaudioprocess = (event) => {
-      chunks.push(new Float32Array(event.inputBuffer.getChannelData(0)));
+      const input = event.inputBuffer.getChannelData(0);
+      chunks.push(new Float32Array(input));
+
+      if (!voiceSessionEnabled || stopped) return;
+
+      const volume = rms(input);
+      const now = performance.now();
+      if (volume > 0.018) {
+        startedSpeaking = true;
+        silenceStartedAt = null;
+      } else if (startedSpeaking) {
+        silenceStartedAt ||= now;
+      }
+
+      const silenceLongEnough = silenceStartedAt && now - silenceStartedAt > 1200;
+      const maxTurnReached = now - startedAt > 15000;
+      if ((startedSpeaking && silenceLongEnough) || maxTurnReached) {
+        stopped = true;
+        setTimeout(() => stopPcmRecording({ autoSubmit: true }), 0);
+      }
     };
 
     source.connect(processor);
@@ -299,15 +345,16 @@ async function startVoice() {
     audioCapture = { context, source, processor, stream, chunks, sampleRate: context.sampleRate };
     els.listenBtn.classList.add("recording");
     els.body.dataset.voice = "recording";
-    els.voiceStatus.textContent = "Recording... click again to stop";
+    els.voiceStatus.textContent = "Listening... speak naturally";
   } catch (error) {
     els.voiceStatus.textContent = "Microphone unavailable";
     alert(`Microphone failed: ${error.message}`);
   }
 }
 
-async function stopPcmRecording() {
+async function stopPcmRecording({ autoSubmit = false } = {}) {
   const capture = audioCapture;
+  if (!capture) return;
   audioCapture = null;
 
   capture.processor.disconnect();
@@ -333,25 +380,54 @@ async function stopPcmRecording() {
     els.transcript.value = stt.transcript;
     els.body.dataset.voice = "ready";
     els.voiceStatus.textContent = `Transcript captured via ${stt.provider}`;
+    if (autoSubmit || voiceSessionEnabled) {
+      await runCheckin();
+    }
   } else {
     els.body.dataset.voice = "ready";
     els.voiceStatus.textContent = stt.error || "No transcript captured";
+    if (voiceSessionEnabled) {
+      const retry = "I did not catch that clearly. Please tell me how you are feeling today.";
+      lastAssistantText = retry;
+      addMessage("assistant", "MATERNAL ai", retry);
+      await speakText(retry, { resumeListening: true });
+    }
   }
 }
 
 async function speakAssistant() {
   if (!lastAssistantText) return;
+  await speakText(lastAssistantText);
+}
+
+async function speakText(text, { resumeListening = false } = {}) {
+  if (!text) return;
+  els.body.dataset.voice = "speaking";
+  els.voiceStatus.textContent = "Speaking with Gradium TTS...";
+
   const tts = await fetchJson("/api/speak", {
     method: "POST",
-    body: JSON.stringify({ text: lastAssistantText })
+    body: JSON.stringify({ text })
   });
 
+  let audio = null;
   if (tts.audioUrl) {
-    new Audio(tts.audioUrl).play();
+    audio = new Audio(tts.audioUrl);
   } else if (tts.audioBase64) {
-    new Audio(`data:${tts.mimeType || "audio/mpeg"};base64,${tts.audioBase64}`).play();
+    audio = new Audio(`data:${tts.mimeType || "audio/mpeg"};base64,${tts.audioBase64}`);
+  }
+
+  if (audio) {
+    await playAudio(audio);
   } else if ("speechSynthesis" in window) {
-    window.speechSynthesis.speak(new SpeechSynthesisUtterance(lastAssistantText));
+    await speakWithBrowser(text);
+  }
+
+  els.body.dataset.voice = "ready";
+  els.voiceStatus.textContent = resumeListening ? "Listening will resume..." : "Voice standby";
+
+  if (resumeListening && voiceSessionEnabled) {
+    setTimeout(() => startVoice(), 450);
   }
 }
 
@@ -398,6 +474,38 @@ function arrayBufferToBase64(buffer) {
     binary += String.fromCharCode(...bytes.subarray(i, i + chunkSize));
   }
   return btoa(binary);
+}
+
+function rms(samples) {
+  let sum = 0;
+  for (let i = 0; i < samples.length; i += 1) {
+    sum += samples[i] * samples[i];
+  }
+  return Math.sqrt(sum / samples.length);
+}
+
+function playAudio(audio) {
+  return new Promise((resolve) => {
+    audio.onended = resolve;
+    audio.onerror = resolve;
+    audio.play().catch(() => resolve());
+  });
+}
+
+function speakWithBrowser(text) {
+  return new Promise((resolve) => {
+    const utterance = new SpeechSynthesisUtterance(text);
+    utterance.rate = 0.94;
+    utterance.pitch = 0.98;
+    utterance.onend = resolve;
+    utterance.onerror = resolve;
+    window.speechSynthesis.speak(utterance);
+  });
+}
+
+function buildGreeting() {
+  const phase = phaseLabels[els.phase.value] || "your current phase";
+  return `Hi, I am MATERNAL ai. I will guide this check-in by voice. You are currently set to ${phase}. Please tell me how you are feeling today, and mention any pain, bleeding, fever, mood changes, or worries.`;
 }
 
 function shortTrend(value) {

@@ -1,0 +1,55 @@
+<svg width="1200" height="560" viewBox="0 0 1200 560" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">MATERNAL ai voice-first maternal safety net</title>
+  <desc id="desc">A visual hero showing a voice-first maternal assistant that listens, reasons, remembers, and escalates urgent risk.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="560" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#06100B"/>
+      <stop offset="0.52" stop-color="#102019"/>
+      <stop offset="1" stop-color="#25150F"/>
+    </linearGradient>
+    <linearGradient id="mint" x1="398" y1="88" x2="823" y2="494" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#DDFEE6"/>
+      <stop offset="0.48" stop-color="#93FFBC"/>
+      <stop offset="1" stop-color="#FFB38E"/>
+    </linearGradient>
+    <filter id="glow" x="-80" y="-80" width="1360" height="720" filterUnits="userSpaceOnUse" color-interpolation-filters="sRGB">
+      <feGaussianBlur stdDeviation="34" result="blur"/>
+      <feBlend mode="screen" in="SourceGraphic" in2="blur"/>
+    </filter>
+    <pattern id="grid" width="44" height="44" patternUnits="userSpaceOnUse">
+      <path d="M44 0H0V44" stroke="#B8E9C5" stroke-opacity="0.06"/>
+    </pattern>
+  </defs>
+  <rect width="1200" height="560" rx="42" fill="url(#bg)"/>
+  <rect width="1200" height="560" rx="42" fill="url(#grid)"/>
+  <circle cx="900" cy="116" r="170" fill="#93FFBC" fill-opacity="0.11"/>
+  <circle cx="238" cy="456" r="190" fill="#FFB38E" fill-opacity="0.1"/>
+  <g filter="url(#glow)">
+    <circle cx="600" cy="274" r="124" stroke="#93FFBC" stroke-opacity="0.36" stroke-width="2"/>
+    <circle cx="600" cy="274" r="92" stroke="#DDFEE6" stroke-opacity="0.38" stroke-width="2"/>
+    <circle cx="600" cy="274" r="56" fill="url(#mint)"/>
+    <path d="M579 276C579 263.85 588.85 254 601 254C613.15 254 623 263.85 623 276V289C623 301.15 613.15 311 601 311C588.85 311 579 301.15 579 289V276Z" fill="#06100B"/>
+    <path d="M560 283C560 306.2 577.43 325 600 325C622.57 325 640 306.2 640 283" stroke="#06100B" stroke-width="12" stroke-linecap="round"/>
+    <path d="M600 325V354" stroke="#06100B" stroke-width="12" stroke-linecap="round"/>
+    <path d="M570 354H630" stroke="#06100B" stroke-width="12" stroke-linecap="round"/>
+  </g>
+  <g opacity="0.9">
+    <path d="M180 290C246 218 336 208 432 265" stroke="#93FFBC" stroke-opacity="0.42" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 18"/>
+    <path d="M768 264C848 202 941 221 1019 300" stroke="#FFB38E" stroke-opacity="0.42" stroke-width="4" stroke-linecap="round" stroke-dasharray="2 18"/>
+  </g>
+  <g>
+    <rect x="88" y="86" width="335" height="162" rx="30" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.12"/>
+    <text x="122" y="135" fill="#DDFEE6" font-family="Arial, sans-serif" font-size="22" font-weight="700">Mother enters portal</text>
+    <text x="122" y="176" fill="#C6D9CE" font-family="Arial, sans-serif" font-size="17">Assistant speaks first, asks status,</text>
+    <text x="122" y="205" fill="#C6D9CE" font-family="Arial, sans-serif" font-size="17">then listens automatically.</text>
+  </g>
+  <g>
+    <rect x="777" y="312" width="335" height="162" rx="30" fill="#FFFFFF" fill-opacity="0.08" stroke="#FFFFFF" stroke-opacity="0.12"/>
+    <text x="811" y="361" fill="#DDFEE6" font-family="Arial, sans-serif" font-size="22" font-weight="700">Doctor-ready safety net</text>
+    <text x="811" y="402" fill="#C6D9CE" font-family="Arial, sans-serif" font-size="17">Green, yellow, red triage with</text>
+    <text x="811" y="431" fill="#C6D9CE" font-family="Arial, sans-serif" font-size="17">history-aware escalation summaries.</text>
+  </g>
+  <text x="88" y="388" fill="#93FFBC" font-family="Arial, sans-serif" font-size="18" font-weight="700" letter-spacing="3">MATERNAL AI</text>
+  <text x="88" y="432" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="46" font-weight="800">Voice-first follow-up</text>
+  <text x="88" y="486" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="46" font-weight="800">from positive test to postpartum.</text>
+</svg>

@@ -1,0 +1,52 @@
+<svg width="1200" height="520" viewBox="0 0 1200 520" fill="none" xmlns="http://www.w3.org/2000/svg" role="img" aria-labelledby="title desc">
+  <title id="title">MATERNAL ai demo story</title>
+  <desc id="desc">A three-act demo arc showing practical support, postpartum mood tracking, and emergency escalation.</desc>
+  <defs>
+    <linearGradient id="bg" x1="0" y1="0" x2="1200" y2="520" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#07110C"/>
+      <stop offset="1" stop-color="#24150F"/>
+    </linearGradient>
+    <style>
+      .card { fill: rgba(255,255,255,0.08); stroke: rgba(255,255,255,0.13); stroke-width: 1.4; }
+      .kicker { font: 700 14px Arial, sans-serif; letter-spacing: 2px; }
+      .title { fill: #FFFFFF; font: 800 25px Arial, sans-serif; }
+      .text { fill: #C6D9CE; font: 17px Arial, sans-serif; }
+    </style>
+  </defs>
+  <rect width="1200" height="520" rx="40" fill="url(#bg)"/>
+  <text x="62" y="75" fill="#93FFBC" class="kicker">DEMO NARRATIVE</text>
+  <text x="62" y="123" fill="#FFFFFF" font-family="Arial, sans-serif" font-size="40" font-weight="800">Show the safety net in three moments.</text>
+  <g>
+    <rect class="card" x="62" y="182" width="320" height="240" rx="30"/>
+    <circle cx="115" cy="238" r="25" fill="#93FFBC"/>
+    <text x="106" y="247" fill="#06100B" font-family="Arial, sans-serif" font-size="24" font-weight="800">1</text>
+    <text x="62" y="464" fill="#93FFBC" class="kicker">GREEN</text>
+    <text x="154" y="235" class="title">Practical start</text>
+    <text x="92" y="286" class="text">"I just had a positive test.</text>
+    <text x="92" y="315" class="text">What should I do first?"</text>
+    <text x="92" y="363" class="text">The agent gives supplements,</text>
+    <text x="92" y="392" class="text">first visit, and scan guidance.</text>
+  </g>
+  <g>
+    <rect class="card" x="440" y="182" width="320" height="240" rx="30"/>
+    <circle cx="493" cy="238" r="25" fill="#FFD1AA"/>
+    <text x="484" y="247" fill="#06100B" font-family="Arial, sans-serif" font-size="24" font-weight="800">2</text>
+    <text x="440" y="464" fill="#FFD1AA" class="kicker">YELLOW</text>
+    <text x="532" y="235" class="title">Memory matters</text>
+    <text x="470" y="286" class="text">"I keep crying and I do not</text>
+    <text x="470" y="315" class="text">feel connected to the baby."</text>
+    <text x="470" y="363" class="text">The agent detects worsening</text>
+    <text x="470" y="392" class="text">postpartum emotional trend.</text>
+  </g>
+  <g>
+    <rect class="card" x="818" y="182" width="320" height="240" rx="30"/>
+    <circle cx="871" cy="238" r="25" fill="#FF8E8E"/>
+    <text x="862" y="247" fill="#06100B" font-family="Arial, sans-serif" font-size="24" font-weight="800">3</text>
+    <text x="818" y="464" fill="#FF8E8E" class="kicker">RED</text>
+    <text x="910" y="235" class="title">Escalate fast</text>
+    <text x="848" y="286" class="text">"Headache, blurry vision,</text>
+    <text x="848" y="315" class="text">and swelling."</text>
+    <text x="848" y="363" class="text">The red flag path creates a</text>
+    <text x="848" y="392" class="text">doctor-ready summary.</text>
+  </g>
+</svg>

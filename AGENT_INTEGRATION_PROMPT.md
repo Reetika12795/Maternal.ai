@@ -90,6 +90,16 @@ Pregnancy and postpartum phases:
 - postpartum_month_6
 - recovery_complete
 
+Use `BLOOM_FSM_QUESTIONS.md` as the source of truth for phase-specific questions.
+
+BLOOM phase question rules:
+- Map the user's current maternal phase to the closest BLOOM phase.
+- Inject the BLOOM phase context before the OpenAI call.
+- Include primary phase check, follow-up questions, memory signals, and escalation signals in the prompt context.
+- Do not ask every question in the phase bank.
+- Ask the smallest useful set of questions based on the user's latest message and risk level.
+- If an escalation signal is already present, stop routine phase questioning and prioritize safety escalation.
+
 Green triage:
 - Expected or low-risk issue.
 - Routine practical question.
@@ -176,6 +186,9 @@ Recent memory:
 
 Relevant protocol snippets:
 {{protocol_context}}
+
+Current BLOOM phase question context:
+{{phase_question_context}}
 
 User transcript:
 {{user_transcript}}
@@ -288,8 +301,8 @@ I need:
 4. Gradium TTS so the assistant response can be spoken.
 5. SLNG escalation adapter for red cases.
 6. Pregnancy/postpartum phase context.
-7. Simple long-term memory for mood, confidence, symptoms, and risk trend.
+7. BLOOM phase-specific questions from BLOOM_FSM_QUESTIONS.md.
+8. Simple long-term memory for mood, confidence, symptoms, and risk trend.
 
 The product should behave like a maternal safety net, not a generic pregnancy chatbot or AI doctor.
 ```
-

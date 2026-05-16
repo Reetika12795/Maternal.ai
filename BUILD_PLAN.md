@@ -187,6 +187,16 @@ Each state should define:
 
 ## Phase Coverage
 
+The full BLOOM phase-question bank lives in `BLOOM_FSM_QUESTIONS.md`.
+
+Use it as the source for:
+
+- Primary phase checks.
+- Follow-up question selection.
+- Memory signals.
+- Escalation signals.
+- Demo phase behavior.
+
 ### positive_test
 
 Goals:
@@ -484,6 +494,9 @@ Recent memory:
 
 Relevant protocol snippets:
 {{protocol_context}}
+
+Current BLOOM phase question context:
+{{phase_question_context}}
 
 User transcript:
 {{user_transcript}}
@@ -837,6 +850,7 @@ Create:
 - API route for check-ins.
 - `lib/maternalPrompt.ts`.
 - `lib/maternalState.ts`.
+- `lib/bloomQuestions.ts`.
 - `lib/triageRules.ts`.
 - `lib/openai.ts`.
 - `lib/gradium.ts`.
@@ -844,6 +858,7 @@ Create:
 - `lib/types.ts`.
 
 Use the MATERNAL ai system prompt and JSON schema from BUILD_PLAN.md.
+Use BLOOM_FSM_QUESTIONS.md as the source for phase-specific questions and memory signals.
 ```
 
 ## Public Docs To Check During Implementation

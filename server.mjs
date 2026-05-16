@@ -12,7 +12,7 @@ import { transcribeWithGradium, speakWithGradium } from "./src/gradium.js";
 import { routeMaternalEscalation } from "./src/slng.js";
 import { recordPioneerEvent } from "./src/pioneer.js";
 import { buildVisualPrompt, requestFalVisual } from "./src/fal.js";
-import { loadMemory, updateMemory } from "./src/memory.js";
+import { loadMemory, resetMemory, updateMemory } from "./src/memory.js";
 
 await loadLocalEnv();
 
@@ -61,6 +61,24 @@ const server = http.createServer(async (req, res) => {
       const body = await readJson(req);
       const result = await handleCheckin(body);
       return sendJson(res, 200, result);
+    }
+
+    if (req.method === "GET" && url.pathname === "/api/history") {
+      const patientId = url.searchParams.get("patientId") || "demo-mother";
+      return sendJson(res, 200, {
+        patientId,
+        memory: await loadMemory(patientId)
+      });
+    }
+
+    if (req.method === "POST" && url.pathname === "/api/history/reset") {
+      const body = await readJson(req);
+      const patientId = body.patientId || "demo-mother";
+      await resetMemory(patientId);
+      return sendJson(res, 200, {
+        patientId,
+        memory: await loadMemory(patientId)
+      });
     }
 
     if (req.method === "POST" && url.pathname === "/api/transcribe") {
@@ -134,10 +152,13 @@ async function handleCheckin(body) {
     memory
   });
 
-  await updateMemory(patientId, {
+  const updatedMemory = await updateMemory(patientId, {
     phase,
     transcript,
     finalTriage: finalResult.triage,
+    assistantText: finalResult.assistantText,
+    followUpQuestions: finalResult.followUpQuestions,
+    doctorSummary: finalResult.doctorSummary,
     memoryUpdate: finalResult.memoryUpdate,
     symptoms: finalResult.detectedSymptoms,
     emotionalSignals: finalResult.emotionalSignals,
@@ -183,6 +204,7 @@ async function handleCheckin(body) {
     bloom,
     result: finalResult,
     escalation,
+    memory: updatedMemory,
     visualPrompt,
     providerMode: process.env.OPENAI_API_KEY ? "openai" : "demo-fallback"
   };

@@ -31,9 +31,9 @@ const bloomTitles = [
 ];
 
 const demos = {
-  green: {
-    phase: "pregnancy_month_2",
-    transcript: "I feel nauseous in the morning and I want to know if I should eat differently."
+  positive: {
+    phase: "positive_test",
+    transcript: "I just had a positive pregnancy test. I feel okay, but I am not sure what supplements I should take or when to book an appointment."
   },
   yellow: {
     phase: "postpartum_week_2",
@@ -48,27 +48,34 @@ const demos = {
 const els = {
   mode: document.querySelector("#mode"),
   integrations: document.querySelector("#integrations"),
-  voiceStatus: document.querySelector("#voiceStatus"),
+  checkinCount: document.querySelector("#checkinCount"),
+  highestRisk: document.querySelector("#highestRisk"),
+  latestMood: document.querySelector("#latestMood"),
+  memoryPhase: document.querySelector("#memoryPhase"),
+  memoryConfidence: document.querySelector("#memoryConfidence"),
+  memorySignals: document.querySelector("#memorySignals"),
+  patientId: document.querySelector("#patientId"),
   phase: document.querySelector("#phase"),
   timeline: document.querySelector("#timeline"),
   transcript: document.querySelector("#transcript"),
   form: document.querySelector("#checkinForm"),
   listenBtn: document.querySelector("#listenBtn"),
-  greenDemo: document.querySelector("#greenDemo"),
+  positiveDemo: document.querySelector("#positiveDemo"),
   yellowDemo: document.querySelector("#yellowDemo"),
   redDemo: document.querySelector("#redDemo"),
+  resetHistory: document.querySelector("#resetHistory"),
+  chatLog: document.querySelector("#chatLog"),
+  voiceStatus: document.querySelector("#voiceStatus"),
   phaseTitle: document.querySelector("#phaseTitle"),
   triageBadge: document.querySelector("#triageBadge"),
-  assistantText: document.querySelector("#assistantText"),
+  body: document.body,
   questions: document.querySelector("#questions"),
   memoryUpdate: document.querySelector("#memoryUpdate"),
   doctorSummary: document.querySelector("#doctorSummary"),
-  visualPrompt: document.querySelector("#visualPrompt"),
   speakBtn: document.querySelector("#speakBtn")
 };
 
 let lastAssistantText = "";
-let recognition = null;
 let audioCapture = null;
 
 init();
@@ -86,16 +93,10 @@ async function init() {
     option.textContent = phaseLabels[phase] || phase;
     els.phase.appendChild(option);
   }
-  els.phase.value = "pregnancy_month_8";
-  renderTimeline(4);
 
-  els.phase.addEventListener("change", () => {
-    const phase = els.phase.value;
-    fetchJson("/api/checkin", {
-      method: "POST",
-      body: JSON.stringify({ phase, transcript: "Quick phase context check." })
-    }).catch(() => null);
-  });
+  els.phase.value = "postpartum_week_2";
+  renderTimeline(7);
+  await loadHistory();
 }
 
 els.form.addEventListener("submit", async (event) => {
@@ -103,17 +104,13 @@ els.form.addEventListener("submit", async (event) => {
   await runCheckin();
 });
 
-els.greenDemo.addEventListener("click", () => setDemo("green"));
+els.positiveDemo.addEventListener("click", () => setDemo("positive"));
 els.yellowDemo.addEventListener("click", () => setDemo("yellow"));
 els.redDemo.addEventListener("click", () => setDemo("red"));
 els.speakBtn.addEventListener("click", speakAssistant);
-els.listenBtn.addEventListener("click", startBrowserVoice);
-document.addEventListener("keydown", (event) => {
-  if (event.code === "Space" && event.target === document.body && !audioCapture) {
-    event.preventDefault();
-    startBrowserVoice();
-  }
-});
+els.listenBtn.addEventListener("click", startVoice);
+els.resetHistory.addEventListener("click", resetHistory);
+els.patientId.addEventListener("change", loadHistory);
 
 function setDemo(kind) {
   els.phase.value = demos[kind].phase;
@@ -121,20 +118,25 @@ function setDemo(kind) {
 }
 
 async function runCheckin() {
+  const transcript = els.transcript.value.trim();
+  if (!transcript) return;
+
+  addMessage("user", "Mother", transcript);
   setLoading(true);
+
   try {
-    const payload = {
-      phase: els.phase.value,
-      transcript: els.transcript.value,
-      patientId: "demo-mother"
-    };
     const data = await fetchJson("/api/checkin", {
       method: "POST",
-      body: JSON.stringify(payload)
+      body: JSON.stringify({
+        phase: els.phase.value,
+        transcript,
+        patientId: els.patientId.value || "demo-mother"
+      })
     });
     renderResult(data);
+    els.transcript.value = "";
   } catch (error) {
-    els.assistantText.textContent = error.message;
+    addMessage("assistant", "System", error.message);
   } finally {
     setLoading(false);
   }
@@ -143,21 +145,28 @@ async function runCheckin() {
 function renderResult(data) {
   const result = data.result;
   lastAssistantText = result.assistantText;
+
+  addMessage("assistant", "MATERNAL ai", result.assistantText, result.triage);
+
   els.phaseTitle.textContent = data.bloom.title;
   els.triageBadge.textContent = result.triage;
   els.triageBadge.className = `badge ${result.triage}`;
-  els.assistantText.textContent = result.assistantText;
+  els.body.dataset.triage = result.triage;
+  renderTimeline(data.bloom.order);
+
   els.questions.innerHTML = "";
   for (const question of result.followUpQuestions || []) {
     const li = document.createElement("li");
     li.textContent = question;
     els.questions.appendChild(li);
   }
+
   els.memoryUpdate.textContent = [
     `Mood: ${result.memoryUpdate.moodTrend}`,
     `Confidence: ${result.memoryUpdate.confidenceTrend}`,
     result.memoryUpdate.notes
   ].filter(Boolean).join("\n");
+
   els.doctorSummary.textContent = JSON.stringify({
     needed: result.doctorSummary.needed,
     urgency: result.doctorSummary.urgency,
@@ -165,8 +174,74 @@ function renderResult(data) {
     clinicalSummary: result.doctorSummary.clinicalSummary,
     escalation: data.escalation
   }, null, 2);
-  els.visualPrompt.textContent = data.visualPrompt;
-  renderTimeline(data.bloom.order);
+
+  renderMemory(data.memory);
+}
+
+async function loadHistory() {
+  const data = await fetchJson(`/api/history?patientId=${encodeURIComponent(els.patientId.value || "demo-mother")}`);
+  renderMemory(data.memory);
+  renderConversationFromMemory(data.memory);
+}
+
+async function resetHistory() {
+  const data = await fetchJson("/api/history/reset", {
+    method: "POST",
+    body: JSON.stringify({ patientId: els.patientId.value || "demo-mother" })
+  });
+  renderMemory(data.memory);
+  els.chatLog.innerHTML = "";
+  addMessage("assistant", "MATERNAL ai", "Patient history reset. Start a new check-in when ready.");
+  els.triageBadge.textContent = "idle";
+  els.triageBadge.className = "badge neutral";
+  els.body.dataset.triage = "idle";
+  els.doctorSummary.textContent = "No escalation yet.";
+  els.memoryUpdate.textContent = "No memory update yet.";
+  els.questions.innerHTML = "";
+}
+
+function renderMemory(memory) {
+  const profile = memory?.profile || {};
+  const recent = memory?.recent || [];
+  els.checkinCount.textContent = profile.totalCheckins || 0;
+  els.highestRisk.textContent = profile.highestTriage || "-";
+  els.latestMood.textContent = shortTrend(profile.moodTrend);
+  els.memoryPhase.textContent = phaseLabels[profile.latestPhase] || profile.latestPhase || "-";
+  els.memoryConfidence.textContent = profile.confidenceTrend || "unknown";
+  els.memorySignals.textContent = (profile.repeatedSignals || []).slice(-4).join(", ") || "none";
+
+  const last = recent[recent.length - 1];
+  if (last?.phase) {
+    els.phase.value = last.phase;
+    renderTimelineFromPhase(last.phase);
+  }
+}
+
+function renderConversationFromMemory(memory) {
+  const recent = memory?.recent || [];
+  els.chatLog.innerHTML = "";
+  if (!recent.length) {
+    addMessage("assistant", "MATERNAL ai", "I am ready for a pregnancy or postpartum check-in. Pick a scenario or type what the mother says.");
+    return;
+  }
+  for (const entry of recent) {
+    addMessage("user", "Mother", entry.transcript);
+    if (entry.assistantText) {
+      addMessage("assistant", "MATERNAL ai", entry.assistantText, entry.finalTriage);
+    }
+  }
+}
+
+function addMessage(type, speaker, text, triage = null) {
+  const article = document.createElement("article");
+  article.className = `message ${type}`;
+  article.innerHTML = `
+    <span>${speaker}${triage ? ` · ${triage.toUpperCase()}` : ""}</span>
+    <p></p>
+  `;
+  article.querySelector("p").textContent = text;
+  els.chatLog.appendChild(article);
+  els.chatLog.scrollTop = els.chatLog.scrollHeight;
 }
 
 function renderTimeline(activeOrder) {
@@ -175,46 +250,39 @@ function renderTimeline(activeOrder) {
     const dot = document.createElement("div");
     dot.className = `dot ${index + 1 === activeOrder ? "active" : ""}`;
     dot.title = title;
-    dot.innerHTML = `<strong>${index + 1}</strong>${title}`;
+    dot.innerHTML = `<em>${phaseIcon(index + 1)}</em><strong>${index + 1}</strong>${title}`;
     els.timeline.appendChild(dot);
   });
 }
 
-async function startBrowserVoice() {
-  if (navigator.mediaDevices?.getUserMedia && window.AudioContext) {
-    await recordPcmForGradium();
-    return;
-  }
-
-  const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
-  if (!SpeechRecognition) {
-    alert("Browser speech recognition is not available here. Use typed transcript or Gradium STT route.");
-    return;
-  }
-  recognition = new SpeechRecognition();
-  recognition.lang = "en-US";
-  recognition.interimResults = false;
-  els.voiceStatus.textContent = "Listening with browser speech...";
-  recognition.onresult = (event) => {
-    els.transcript.value = event.results[0][0].transcript;
-    els.voiceStatus.textContent = "Transcript captured";
-  };
-  recognition.onerror = (event) => {
-    els.voiceStatus.textContent = "Voice capture failed";
-    alert(`Voice capture failed: ${event.error}`);
-  };
-  recognition.onend = () => {
-    if (els.voiceStatus.textContent.includes("Listening")) els.voiceStatus.textContent = "Voice standby";
-  };
-  recognition.start();
+function renderTimelineFromPhase(phase) {
+  const order = {
+    positive_test: 1,
+    pregnancy_month_1: 1,
+    pregnancy_month_2: 2,
+    pregnancy_month_3: 2,
+    pregnancy_month_4: 3,
+    pregnancy_month_5: 3,
+    pregnancy_month_6: 4,
+    pregnancy_month_7: 4,
+    pregnancy_month_8: 5,
+    pregnancy_month_9: 5,
+    birth: 6,
+    postpartum_week_1: 6,
+    postpartum_week_2: 7,
+    postpartum_week_6: 8,
+    postpartum_month_3: 8,
+    postpartum_month_6: 9,
+    recovery_complete: 9
+  }[phase] || 1;
+  renderTimeline(order);
 }
 
-async function recordPcmForGradium() {
+async function startVoice() {
   if (audioCapture) {
     await stopPcmRecording();
     return;
   }
-
   try {
     const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
     const context = new AudioContext();
@@ -228,17 +296,9 @@ async function recordPcmForGradium() {
 
     source.connect(processor);
     processor.connect(context.destination);
-
-    audioCapture = {
-      context,
-      source,
-      processor,
-      stream,
-      chunks,
-      sampleRate: context.sampleRate
-    };
-
+    audioCapture = { context, source, processor, stream, chunks, sampleRate: context.sampleRate };
     els.listenBtn.classList.add("recording");
+    els.body.dataset.voice = "recording";
     els.voiceStatus.textContent = "Recording... click again to stop";
   } catch (error) {
     els.voiceStatus.textContent = "Microphone unavailable";
@@ -256,14 +316,14 @@ async function stopPcmRecording() {
   await capture.context.close();
 
   els.listenBtn.classList.remove("recording");
-  els.voiceStatus.textContent = "Transcribing voice with Gradium...";
+  els.body.dataset.voice = "thinking";
+  els.voiceStatus.textContent = "Transcribing with Gradium...";
 
   const pcm = encodePcm16(resampleTo24k(flattenFloat32(capture.chunks), capture.sampleRate));
-  const audioBase64 = arrayBufferToBase64(pcm.buffer);
   const stt = await fetchJson("/api/transcribe", {
     method: "POST",
     body: JSON.stringify({
-      audioBase64,
+      audioBase64: arrayBufferToBase64(pcm.buffer),
       mimeType: "audio/pcm",
       inputFormat: "pcm"
     })
@@ -271,9 +331,11 @@ async function stopPcmRecording() {
 
   if (stt.transcript) {
     els.transcript.value = stt.transcript;
+    els.body.dataset.voice = "ready";
     els.voiceStatus.textContent = `Transcript captured via ${stt.provider}`;
   } else {
-    els.voiceStatus.textContent = stt.error || "Gradium returned no transcript; use typed input";
+    els.body.dataset.voice = "ready";
+    els.voiceStatus.textContent = stt.error || "No transcript captured";
   }
 }
 
@@ -286,19 +348,10 @@ async function speakAssistant() {
 
   if (tts.audioUrl) {
     new Audio(tts.audioUrl).play();
-    return;
-  }
-
-  if (tts.audioBase64) {
+  } else if (tts.audioBase64) {
     new Audio(`data:${tts.mimeType || "audio/mpeg"};base64,${tts.audioBase64}`).play();
-    return;
-  }
-
-  if ("speechSynthesis" in window) {
-    const utterance = new SpeechSynthesisUtterance(lastAssistantText);
-    utterance.rate = 0.94;
-    utterance.pitch = 0.98;
-    window.speechSynthesis.speak(utterance);
+  } else if ("speechSynthesis" in window) {
+    window.speechSynthesis.speak(new SpeechSynthesisUtterance(lastAssistantText));
   }
 }
 
@@ -316,19 +369,15 @@ function flattenFloat32(chunks) {
 function resampleTo24k(input, inputSampleRate) {
   const outputSampleRate = 24000;
   if (inputSampleRate === outputSampleRate) return input;
-
   const ratio = inputSampleRate / outputSampleRate;
-  const outputLength = Math.floor(input.length / ratio);
-  const output = new Float32Array(outputLength);
-
-  for (let i = 0; i < outputLength; i += 1) {
+  const output = new Float32Array(Math.floor(input.length / ratio));
+  for (let i = 0; i < output.length; i += 1) {
     const index = i * ratio;
     const left = Math.floor(index);
     const right = Math.min(left + 1, input.length - 1);
     const weight = index - left;
     output[i] = input[left] * (1 - weight) + input[right] * weight;
   }
-
   return output;
 }
 
@@ -351,10 +400,20 @@ function arrayBufferToBase64(buffer) {
   return btoa(binary);
 }
 
+function shortTrend(value) {
+  if (value === "worsening") return "down";
+  if (value === "improving") return "up";
+  return value || "?";
+}
+
+function phaseIcon(order) {
+  return ["+", "◐", "◌", "!", "⇢", "✦", "♡", "∞", "✓"][order - 1] || "•";
+}
+
 function setLoading(isLoading) {
   const button = els.form.querySelector(".primary");
   button.disabled = isLoading;
-  button.textContent = isLoading ? "Running check-in..." : "Run MATERNAL check-in";
+  button.textContent = isLoading ? "Thinking..." : "Send check-in";
 }
 
 async function fetchJson(url, options = {}) {

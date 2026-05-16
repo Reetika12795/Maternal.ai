@@ -54,12 +54,7 @@ Use the demo as a story, not a feature tour. Start with a normal pregnancy quest
 <details>
 <summary><strong>Suggested 2-minute video script</strong></summary>
 
-1. Open with the problem: "Pregnancy and postpartum follow-up is fragmented. Mothers often do not know which symptoms are urgent, and doctors do not have time to read long chat histories."
-2. Start the app and click **Start voice check-in**: "MATERNAL ai is voice first. The assistant talks first and guides the mother through the check-in."
-3. Show a green scenario: "I just had a positive pregnancy test. What should I do first?" Point to phase-aware practical guidance.
-4. Show a yellow scenario: "I keep crying and I do not feel connected to the baby." Point to memory and postpartum mood trend.
-5. Show a red scenario: "I have a bad headache, blurry vision, and swelling." Point to deterministic red-flag escalation and doctor summary.
-6. Close with the thesis: "This is not a chatbot. It is a maternal safety net that listens, remembers, triages, and escalates."
+https://drive.google.com/drive/folders/1cZnjALs24OtmgJHXSk-I1NnRLBwHBU_3
 
 </details>
 

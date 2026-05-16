@@ -1,0 +1,146 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>MATERNAL ai Prototype</title>
+    <link rel="stylesheet" href="/styles.css" />
+  </head>
+  <body>
+    <main class="desktop-shell">
+      <nav class="topbar">
+        <div class="brand-mark">MA</div>
+        <div>
+          <strong>MATERNAL ai</strong>
+          <span>Protocol-bound maternal follow-up</span>
+        </div>
+        <div class="topbar-status">
+          <span id="mode">Checking integrations...</span>
+          <small id="integrations"></small>
+        </div>
+      </nav>
+
+      <section class="hero-frame">
+        <div class="hero-copy">
+          <p class="eyebrow">BLOOM maternal safety net</p>
+          <h1>One voice check-in. One clear safety decision.</h1>
+          <p class="lede">
+            A desktop demo framework for pregnancy and postpartum follow-up: listen, understand the BLOOM phase, classify risk, update memory, and escalate when needed.
+          </p>
+        </div>
+        <div class="hero-metrics">
+          <div>
+            <span>9</span>
+            <small>BLOOM phases</small>
+          </div>
+          <div>
+            <span>3</span>
+            <small>triage states</small>
+          </div>
+          <div>
+            <span>1</span>
+            <small>doctor summary</small>
+          </div>
+        </div>
+      </section>
+
+      <section class="timeline-panel">
+        <div class="section-title">
+          <p class="eyebrow">FSM timeline</p>
+          <h2>BLOOM journey</h2>
+        </div>
+        <div class="timeline" id="timeline"></div>
+      </section>
+
+      <section class="workspace">
+        <form id="checkinForm" class="panel checkin-console">
+          <div class="panel-header">
+            <div>
+              <p class="eyebrow">Input</p>
+              <h2>Mother check-in console</h2>
+            </div>
+            <div class="voice-status">
+              <span id="voiceStatus">Voice standby</span>
+              <small>Gradium STT when configured, browser fallback otherwise</small>
+            </div>
+          </div>
+
+          <section class="voice-stage">
+            <button type="button" id="listenBtn" class="mic-orb" aria-label="Record voice check-in">
+              <span class="mic-icon">●</span>
+              <span>Hold space for voice</span>
+            </button>
+            <div class="signal-stack" aria-hidden="true">
+              <i></i><i></i><i></i><i></i><i></i><i></i><i></i>
+            </div>
+            <div class="voice-copy">
+              <strong>Speak naturally</strong>
+              <p>“I have a headache and my vision is blurry.”</p>
+            </div>
+          </section>
+
+          <div class="field-grid">
+            <div class="field">
+              <label for="phase">Current BLOOM phase</label>
+              <select id="phase" name="phase"></select>
+            </div>
+            <div class="demo-buttons">
+              <button type="button" id="greenDemo">Green demo</button>
+              <button type="button" id="yellowDemo">Yellow demo</button>
+              <button type="button" id="redDemo">Red demo</button>
+            </div>
+          </div>
+
+          <label for="transcript">Transcript or typed message</label>
+          <textarea id="transcript" name="transcript" rows="10" placeholder="Example: I have a terrible headache, blurry vision, and my hands and face are swollen."></textarea>
+
+          <button class="primary" type="submit">Run protocol check</button>
+        </form>
+
+        <section class="panel decision-panel">
+          <div class="decision-top">
+            <div>
+              <p class="eyebrow">Decision</p>
+              <h2 id="phaseTitle">Waiting for check-in</h2>
+            </div>
+            <span id="triageBadge" class="badge neutral">idle</span>
+          </div>
+
+          <div class="assistant-response">
+            <h3>Patient-facing response</h3>
+            <p id="assistantText">Run a check-in to see the protocol-bound response.</p>
+            <button type="button" id="speakBtn">Speak response</button>
+          </div>
+        </section>
+      </section>
+
+      <section class="insight-grid">
+        <article class="panel insight-card">
+          <p class="eyebrow">Next questions</p>
+          <h3>Follow-up</h3>
+          <ul id="questions"></ul>
+        </article>
+
+        <article class="panel insight-card">
+          <p class="eyebrow">Longitudinal context</p>
+          <h3>Memory update</h3>
+          <p id="memoryUpdate">No memory update yet.</p>
+        </article>
+
+        <article class="panel doctor-card">
+          <p class="eyebrow">Escalation</p>
+          <h3>Doctor summary</h3>
+          <pre id="doctorSummary">No escalation yet.</pre>
+        </article>
+
+        <article class="panel visual-card">
+          <p class="eyebrow">Education layer</p>
+          <h3>fal.ai visual prompt</h3>
+          <p id="visualPrompt">The app will generate a safe visual explainer prompt after each check-in.</p>
+        </article>
+      </section>
+    </main>
+
+    <script src="/app.js" type="module"></script>
+  </body>
+</html>

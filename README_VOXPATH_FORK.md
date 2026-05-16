@@ -79,14 +79,14 @@ maternal_ai/
   __init__.py
   fsm.py                       state machine and deterministic guardrails
   llm.py                       OpenAI Responses wrapper with strict schema
-  voice.py                     Gradium STT and TTS clients
+  voice.py                     Gradium STT and TTS clients (official SDK)
   pipeline.py                  end-to-end check-in pipeline
   protocol/
     maternal_protocol.yaml     9-state FSM and red/yellow phrase lists
   api/
-    server.py                  FastAPI service exposing /checkin
+    server.py                  FastAPI service: /checkin (text) and /voice (audio)
   static/
-    index.html                 minimal web UI for the demo
+    index.html                 web UI with hold-to-talk mic capture and auto playback
 demo/
   scenarios.py                 three scripted check-ins (green, yellow, red)
 tests/
@@ -110,10 +110,20 @@ uvicorn maternal_ai.api.server:app --reload --port 8000
 # open http://localhost:8000
 ```
 
-The static page at `/` lets a reviewer pick a state, paste or type a
-mother transcript, and see the FSM verdict and the LLM response side
-by side. Three preset buttons load a green, a yellow, and a red
-example that exercise the deterministic override path.
+The static page at `/` is the live voice demo. Pick a state, hold the
+microphone button, speak, release Stop. The browser uploads the WebM
+blob to `POST /voice`. The server converts it to WAV via ffmpeg,
+runs Gradium STT, runs the FSM and the OpenAI structured call,
+resolves deterministic overrides, synthesises the assistant reply
+with Gradium TTS, and returns one JSON payload with the audio
+embedded as base64. The browser auto-plays the reply and renders the
+triage verdict, the transcript, and the raw response.
+
+A text fallback is also provided: type instead of speak, the
+assistant still answers with synthesised audio.
+
+See `RUN_LOCAL.md` for a step-by-step laptop setup, including the
+ffmpeg dependency and the suggested 60-second screen-recording flow.
 
 ## Safety contract
 
@@ -131,22 +141,21 @@ fast.
 
 ## Demo script for the 60-second pitch
 
-1. Open the web UI. Click **Red example**. The state selector jumps
-   to `s4_risk_detection` (late pregnancy). The transcript reads
-   `I have a terrible headache, my vision is blurry, and my hands
-   and face are swollen.` Click **Run check-in**.
-2. The triage badge turns red. The assistant text is short and tells
-   the mother to seek urgent care. The doctor summary card opens
-   with a JSON payload that names the symptoms and the urgency
-   level. An escalation file is written under `escalations/`.
-3. Click **Green example**. Same architecture, different verdict.
-   Practical advice, no escalation.
-4. Click **Yellow example**. Postpartum mood. The badge says yellow.
-   The mood trend in `memoryUpdate` is `worsening`. A clinician
-   contact is recommended, no emergency.
+1. Open the web UI. Pick `Risk Detection (pregnancy)`. Hold the mic.
+   Say "I have a bad headache and my vision is blurry since this
+   morning". Stop. The triage badge turns red, the assistant speaks
+   the urgent-care instruction back, an escalation record is written.
+2. Pick `Emotional Adjustment (postpartum)`. Hold the mic. Say "I
+   feel like a bad mother. I would never hurt myself but it is
+   getting harder every day". Stop. The badge turns red with a
+   deterministic override marker. The substring "hurt myself" wins
+   even inside a denial sentence: that is the safety bias.
+3. Pick `Positive Test (pregnancy)`. Hold the mic. Say "I am
+   thirteen weeks pregnant, a bit nauseous in the mornings".
+   Stop. Green. Practical advice. No escalation.
 
-That is the architecture: one FSM, three triage colors, one auditable
-trail per turn.
+That is the architecture: one FSM, three triage colors, one
+auditable trail per turn, voice in and voice out.
 
 ## Roadmap
 

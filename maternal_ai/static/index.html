@@ -1,0 +1,233 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+  <title>Maternal IA - protocol-bound maternal follow-up</title>
+  <style>
+    :root {
+      --paper: #f7f3ed;
+      --paper-soft: #efe9df;
+      --ink: #1d1c1a;
+      --ink-soft: #4a4744;
+      --accent: #c2410c;
+      --green: #166534;
+      --yellow: #b45309;
+      --red: #b91c1c;
+      --line: #d8cfc1;
+    }
+    * { box-sizing: border-box; }
+    body {
+      margin: 0;
+      font-family: -apple-system, Inter, system-ui, sans-serif;
+      background: var(--paper);
+      color: var(--ink);
+      min-height: 100vh;
+    }
+    header {
+      padding: 24px 32px;
+      border-bottom: 1px solid var(--line);
+      display: flex;
+      justify-content: space-between;
+      align-items: baseline;
+    }
+    header h1 {
+      margin: 0;
+      font-size: 22px;
+      font-weight: 500;
+      letter-spacing: -0.02em;
+    }
+    header .meta {
+      font-size: 12px;
+      color: var(--ink-soft);
+      text-transform: uppercase;
+      letter-spacing: 0.08em;
+    }
+    main {
+      max-width: 880px;
+      margin: 0 auto;
+      padding: 32px;
+      display: grid;
+      gap: 24px;
+    }
+    .row { display: grid; gap: 12px; }
+    label { font-size: 13px; color: var(--ink-soft); }
+    select, textarea, button {
+      font: inherit;
+      border: 1px solid var(--line);
+      border-radius: 6px;
+      padding: 10px 12px;
+      background: white;
+      color: var(--ink);
+    }
+    textarea { min-height: 100px; resize: vertical; }
+    button {
+      background: var(--ink);
+      color: var(--paper);
+      cursor: pointer;
+      border: 0;
+      padding: 12px 18px;
+      font-weight: 500;
+    }
+    button:disabled { opacity: 0.5; cursor: wait; }
+    button.secondary { background: var(--paper-soft); color: var(--ink); border: 1px solid var(--line); }
+    .badge {
+      display: inline-block;
+      padding: 4px 10px;
+      border-radius: 999px;
+      font-size: 12px;
+      font-weight: 600;
+      letter-spacing: 0.06em;
+      text-transform: uppercase;
+    }
+    .badge.green { background: #dcfce7; color: var(--green); }
+    .badge.yellow { background: #fef3c7; color: var(--yellow); }
+    .badge.red { background: #fee2e2; color: var(--red); }
+    .card {
+      background: white;
+      border: 1px solid var(--line);
+      border-radius: 8px;
+      padding: 18px 20px;
+    }
+    .card h3 {
+      margin: 0 0 8px;
+      font-size: 13px;
+      letter-spacing: 0.08em;
+      text-transform: uppercase;
+      color: var(--ink-soft);
+      font-weight: 600;
+    }
+    .card p { margin: 0 0 8px; line-height: 1.5; }
+    .followups li { margin-bottom: 6px; }
+    .summary pre {
+      background: var(--paper-soft);
+      padding: 12px;
+      border-radius: 6px;
+      overflow-x: auto;
+      font-size: 12px;
+    }
+    .examples { display: flex; gap: 8px; flex-wrap: wrap; }
+    .examples button {
+      background: var(--paper-soft);
+      color: var(--ink);
+      border: 1px solid var(--line);
+      padding: 6px 10px;
+      font-size: 12px;
+      font-weight: 500;
+    }
+  </style>
+</head>
+<body>
+  <header>
+    <h1>Maternal IA</h1>
+    <span class="meta">protocol-bound maternal follow-up</span>
+  </header>
+  <main>
+    <section class="row">
+      <label for="state">Maternal state</label>
+      <select id="state"></select>
+    </section>
+
+    <section class="row">
+      <label for="transcript">User transcript (typed for demo, audio later)</label>
+      <textarea id="transcript" placeholder="Type what the mother says..."></textarea>
+      <div class="examples">
+        <button data-example="green">Green example</button>
+        <button data-example="yellow">Yellow example</button>
+        <button data-example="red">Red example</button>
+      </div>
+    </section>
+
+    <section class="row">
+      <button id="run">Run check-in</button>
+    </section>
+
+    <section id="result" class="row" hidden>
+      <div class="card">
+        <h3>Triage</h3>
+        <p><span id="badge" class="badge"></span> <span id="overridden" style="font-size:12px;color:var(--ink-soft);"></span></p>
+      </div>
+      <div class="card">
+        <h3>Assistant</h3>
+        <p id="assistant"></p>
+        <ul id="followups" class="followups"></ul>
+      </div>
+      <div class="card summary" id="docsummary-card" hidden>
+        <h3>Doctor summary</h3>
+        <pre id="docsummary"></pre>
+      </div>
+    </section>
+  </main>
+
+  <script>
+    const API = location.origin;
+    const EXAMPLES = {
+      green: { state: "s1_positive_test", text: "I feel nauseous in the morning and I want to know if I should eat differently." },
+      yellow: { state: "s7_emotional_adjustment", text: "I cry almost every day and I feel overwhelmed, but I do not want to hurt myself or the baby." },
+      red: { state: "s4_risk_detection", text: "I have a terrible headache, my vision is blurry, and my hands and face are swollen." },
+    };
+
+    async function loadStates() {
+      const r = await fetch(API + "/states");
+      const data = await r.json();
+      const sel = document.getElementById("state");
+      sel.innerHTML = data.states.map(s => `<option value="${s.id}">${s.label} (${s.phase})</option>`).join("");
+    }
+
+    async function run() {
+      const btn = document.getElementById("run");
+      btn.disabled = true;
+      btn.textContent = "Running...";
+      try {
+        const state_id = document.getElementById("state").value;
+        const transcript = document.getElementById("transcript").value;
+        const r = await fetch(API + "/checkin", {
+          method: "POST",
+          headers: { "Content-Type": "application/json" },
+          body: JSON.stringify({ state_id, transcript }),
+        });
+        const data = await r.json();
+        render(data);
+      } catch (err) {
+        alert("Error: " + err.message);
+      } finally {
+        btn.disabled = false;
+        btn.textContent = "Run check-in";
+      }
+    }
+
+    function render(data) {
+      document.getElementById("result").hidden = false;
+      const badge = document.getElementById("badge");
+      badge.className = "badge " + data.triage.final;
+      badge.textContent = data.triage.final;
+      const overridden = document.getElementById("overridden");
+      if (data.triage.overridden) {
+        overridden.textContent = `(LLM said ${data.triage.llm}, deterministic rule fired: ${data.triage.deterministic})`;
+      } else {
+        overridden.textContent = "";
+      }
+      document.getElementById("assistant").textContent = data.assistantText;
+      const ul = document.getElementById("followups");
+      ul.innerHTML = (data.followUpQuestions || []).map(q => `<li>${q}</li>`).join("");
+      if (data.doctorSummary && data.doctorSummary.needed) {
+        document.getElementById("docsummary-card").hidden = false;
+        document.getElementById("docsummary").textContent = JSON.stringify(data.doctorSummary, null, 2);
+      } else {
+        document.getElementById("docsummary-card").hidden = true;
+      }
+    }
+
+    document.getElementById("run").addEventListener("click", run);
+    document.querySelectorAll(".examples button").forEach(b => {
+      b.addEventListener("click", () => {
+        const ex = EXAMPLES[b.dataset.example];
+        document.getElementById("state").value = ex.state;
+        document.getElementById("transcript").value = ex.text;
+      });
+    });
+
+    loadStates();
+  </script>
+</body>
+</html>

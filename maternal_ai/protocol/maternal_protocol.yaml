@@ -1,0 +1,299 @@
+name: Maternal IA
+description: >
+  Pregnancy and postpartum follow-up navigator. Two phases, nine FSM
+  states, traffic-light triage. Deterministic red-flag rules sit on top
+  of the LLM and cannot be overridden by it.
+
+# ---------------------------------------------------------------------
+# PHASE 1 - PREGNANCY
+# PHASE 2 - POSTPARTUM
+# Each state declares: id, label, goals, routine_questions, red_flags,
+# yellow_flags, next_state, education_topics.
+# ---------------------------------------------------------------------
+
+states:
+
+  - id: s1_positive_test
+    phase: pregnancy
+    label: Positive Test
+    goals:
+      - Confirm next clinical step
+      - Capture last menstrual period or estimated due date
+      - Encourage booking a prenatal appointment
+    routine_questions:
+      - Nutrition and supplements - are you taking folic acid?
+      - Do you have a doctor or clinic already booked?
+      - Any severe pain, bleeding, fever, or fainting today?
+    red_flags:
+      - heavy bleeding
+      - severe one-sided pain
+      - fainting
+      - high fever
+    yellow_flags:
+      - mild persistent nausea
+      - mild dizziness
+    education_topics:
+      - folic acid
+      - hydration
+      - alcohol and tobacco
+    next_state: s2_first_scan
+
+  - id: s2_first_scan
+    phase: pregnancy
+    label: First Scan
+    goals:
+      - Confirm first ultrasound completed
+      - Capture gestational age estimate
+      - Surface early bleeding or pain
+    routine_questions:
+      - Have you completed your first ultrasound?
+      - Any bleeding or unusual cramping this week?
+      - Are you keeping fluids down?
+    red_flags:
+      - heavy bleeding
+      - severe abdominal pain
+      - severe dehydration
+    yellow_flags:
+      - persistent vomiting
+      - intermittent spotting
+    education_topics:
+      - first trimester nutrition
+      - warning signs
+    next_state: s3_baby_development
+
+  - id: s3_baby_development
+    phase: pregnancy
+    label: Baby Development
+    goals:
+      - Monitor fetal movement expectations
+      - Check routine symptoms
+      - Reinforce prenatal appointment cadence
+    routine_questions:
+      - Is baby movement normal for this stage?
+      - Any new pain, bleeding, fever, or unusual discharge?
+      - How is your sleep and nutrition?
+    red_flags:
+      - heavy bleeding
+      - fluid leakage
+      - severe headache with vision symptoms
+      - fever above 38.5 C
+    yellow_flags:
+      - reduced fetal movement reported once
+      - persistent reflux
+    education_topics:
+      - fetal movement
+      - balanced diet
+      - sleep posture
+    next_state: s4_risk_detection
+
+  - id: s4_risk_detection
+    phase: pregnancy
+    label: Risk Detection
+    goals:
+      - Late pregnancy symptom monitoring
+      - Blood pressure warning signs
+      - Pre-eclampsia screening signals
+    routine_questions:
+      - Any severe headache, vision changes, or facial swelling?
+      - How is fetal movement compared to last week?
+      - Any contractions or fluid leakage?
+    red_flags:
+      - severe headache with vision changes
+      - facial or hand swelling
+      - chest pain or shortness of breath
+      - reduced fetal movement
+      - heavy bleeding
+      - fluid leakage
+      - regular painful contractions before expected term
+    yellow_flags:
+      - mild persistent headache
+      - mild ankle swelling
+    education_topics:
+      - blood pressure
+      - pre-eclampsia warning signs
+    next_state: s5_birth_preparation
+
+  - id: s5_birth_preparation
+    phase: pregnancy
+    label: Birth Preparation
+    goals:
+      - Confirm hospital plan
+      - Recognise early labour signs
+      - Capture support contact
+    routine_questions:
+      - Do you have your hospital bag ready?
+      - Have you noticed any contractions or fluid leakage?
+      - Who will accompany you on the day?
+    red_flags:
+      - heavy bleeding
+      - fluid leakage with green or brown fluid
+      - reduced fetal movement
+      - severe abdominal pain
+    yellow_flags:
+      - irregular Braxton-Hicks
+      - mild back pain
+    education_topics:
+      - labour signs
+      - when to go to hospital
+    next_state: s6_delivery_recovery
+
+  - id: s6_delivery_recovery
+    phase: pregnancy
+    label: Delivery and Recovery
+    goals:
+      - Immediate post-birth safety
+      - Bleeding, fever, pain, wound or C-section symptoms
+      - Newborn warning signs
+    routine_questions:
+      - How is recovery progressing today?
+      - Any heavy bleeding, fever, or severe pain?
+      - Is baby feeding well?
+    red_flags:
+      - heavy bleeding
+      - fever above 38 C
+      - severe pain
+      - fainting
+      - trouble breathing
+      - thoughts of self-harm or harming the baby
+    yellow_flags:
+      - moderate fatigue
+      - mild perineal pain
+    education_topics:
+      - wound care
+      - feeding basics
+    next_state: s7_emotional_adjustment
+
+  - id: s7_emotional_adjustment
+    phase: postpartum
+    label: Emotional Adjustment
+    goals:
+      - Mood and sleep check-in
+      - Baby-blues vs depression triage
+      - Family and partner support context
+    routine_questions:
+      - How is your mood today?
+      - Are you sleeping when the baby sleeps?
+      - Do you have someone you can talk to?
+    red_flags:
+      - thoughts of self-harm
+      - thoughts of harming the baby
+      - feeling unable to care for self or baby
+      - hallucinations or delusions
+    yellow_flags:
+      - crying most days
+      - feeling overwhelmed
+      - low mood without immediate danger
+    education_topics:
+      - baby blues vs postpartum depression
+      - sleep hygiene
+    next_state: s8_ppd_risk_window
+
+  - id: s8_ppd_risk_window
+    phase: postpartum
+    label: PPD Risk Window
+    goals:
+      - Postpartum depression screening
+      - Detect anxiety, disconnection, hopelessness
+      - Track mood trend across check-ins
+    routine_questions:
+      - Do you feel emotionally connected to your baby?
+      - Have you had moments of hopelessness this week?
+      - How is your appetite and energy?
+    red_flags:
+      - persistent hopelessness
+      - thoughts of self-harm
+      - thoughts of harming the baby
+      - severe panic
+      - psychosis-like statements
+    yellow_flags:
+      - persistent worry
+      - low mood for more than two weeks
+      - disconnection from baby reported once
+    education_topics:
+      - PPD signs
+      - when to call a clinician
+    next_state: s9_long_term_wellbeing
+
+  - id: s9_long_term_wellbeing
+    phase: postpartum
+    label: Long-Term Wellbeing
+    goals:
+      - Recovery trend
+      - Confidence, bonding, feeding sustainability
+      - Escalate persistent depression or anxiety signals
+    routine_questions:
+      - Do you feel like yourself again?
+      - How is your confidence as a parent?
+      - Any ongoing pain, bleeding, or mood concerns?
+    red_flags:
+      - self-harm language
+      - baby-harm language
+      - persistent severe pain or bleeding
+      - psychosis-like statements
+    yellow_flags:
+      - persistent low confidence
+      - sleep deprivation effects
+    education_topics:
+      - returning to work
+      - long-term mental health
+    next_state: null  # terminal: recovery_complete
+
+# ---------------------------------------------------------------------
+# DETERMINISTIC TRIAGE RULES
+# Pure substring matching on the user transcript. If any rule fires,
+# the FSM overrides the LLM triageCandidate. These are non-negotiable.
+# ---------------------------------------------------------------------
+
+deterministic_red_phrases:
+  - kill myself
+  - want to die
+  - end my life
+  - hurt myself
+  - harm the baby
+  - hurt the baby
+  - kill the baby
+  - hallucination
+  - hearing voices
+  - heavy bleeding
+  - chest pain
+  - cannot breathe
+  - can't breathe
+  - shortness of breath
+  - severe headache
+  - vision is blurry
+  - blurry vision
+  - face is swollen
+  - face swelling
+
+deterministic_yellow_phrases:
+  - feel overwhelmed
+  - cry every day
+  - cry almost every day
+  - cant sleep
+  - can't sleep
+  - very tired
+  - mild fever
+  - persistent nausea
+
+# ---------------------------------------------------------------------
+# LLM CONTRACT
+# Structured output schema is defined in maternal_ai.llm.
+# System prompt is built per turn from the active state goals,
+# routine questions, red and yellow flags, and patient memory.
+# ---------------------------------------------------------------------
+
+llm:
+  provider: openai
+  model: gpt-4o-mini
+  temperature: 0.2
+  max_tokens: 280
+
+voice:
+  stt:
+    provider: gradium
+    language: en
+  tts:
+    provider: gradium
+    voice: default
+    language: en
+    sample_rate: 48000

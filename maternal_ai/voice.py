@@ -1,21 +1,24 @@
-"""Gradium STT and TTS adapters.
+"""Gradium STT and TTS clients using the official `gradium` SDK.
 
-Gradium provides realtime, low-latency voice models. For the hackathon
-demo we use the REST endpoints. Streaming over WebSocket is available
-at wss://eu.api.gradium.ai/api/speech/tts and can be wired later.
+The browser uploads audio as webm/opus from MediaRecorder. We convert
+to WAV via ffmpeg before handing the bytes to Gradium STT. TTS output
+is returned as raw WAV bytes that the API layer can base64-encode and
+embed in the JSON response.
 """
 
 from __future__ import annotations
 
+import asyncio
 import os
+import shutil
+import subprocess
+import tempfile
 from pathlib import Path
-from typing import Optional
 
-import httpx
+import gradium
+from gradium.speech import STTSetup
 
-GRADIUM_BASE = "https://eu.api.gradium.ai/api/speech"
-DEFAULT_VOICE = "default"
-DEFAULT_LANGUAGE = "en"
+DEFAULT_VOICE_ID = os.environ.get("GRADIUM_VOICE_ID", "YTpq7expH9539ERJ")
 DEFAULT_MODEL = "default"
 
 
@@ -26,55 +29,77 @@ def _api_key() -> str:
     return key
 
 
-def stt(audio_path: str | Path, language: str = DEFAULT_LANGUAGE) -> str:
-    """Send an audio file to Gradium STT and return the transcript."""
-    audio_path = Path(audio_path)
-    with audio_path.open("rb") as fh:
-        files = {"audio": (audio_path.name, fh, "audio/wav")}
-        headers = {"Authorization": f"Bearer {_api_key()}"}
-        data = {"language": language}
-        resp = httpx.post(
-            f"{GRADIUM_BASE}/stt",
-            files=files,
-            data=data,
-            headers=headers,
-            timeout=30.0,
+def _client() -> gradium.client.GradiumClient:
+    return gradium.client.GradiumClient(api_key=_api_key())
+
+
+def _ensure_wav(raw_bytes: bytes, content_type: str | None) -> bytes:
+    """Return WAV bytes. If the input is already WAV, pass through.
+
+    Otherwise shell out to ffmpeg to transcode. ffmpeg is required for
+    browser recordings (webm/opus). The function is sync because the
+    FastAPI endpoint already runs the call in a thread.
+    """
+    if raw_bytes[:4] == b"RIFF":
+        return raw_bytes
+    if not shutil.which("ffmpeg"):
+        raise RuntimeError("ffmpeg is required to convert non-WAV uploads")
+    with tempfile.NamedTemporaryFile(suffix=".in", delete=False) as fin:
+        fin.write(raw_bytes)
+        fin_path = fin.name
+    fout_path = fin_path + ".wav"
+    try:
+        proc = subprocess.run(
+            [
+                "ffmpeg",
+                "-y",
+                "-i",
+                fin_path,
+                "-ar",
+                "16000",
+                "-ac",
+                "1",
+                "-f",
+                "wav",
+                fout_path,
+            ],
+            capture_output=True,
         )
-    resp.raise_for_status()
-    payload = resp.json()
-    return payload.get("transcript") or payload.get("text") or ""
+        if proc.returncode != 0:
+            raise RuntimeError(f"ffmpeg failed: {proc.stderr.decode()[:300]}")
+        return Path(fout_path).read_bytes()
+    finally:
+        for p in (fin_path, fout_path):
+            try:
+                os.unlink(p)
+            except FileNotFoundError:
+                pass
 
 
-def tts(
-    text: str,
-    out_path: str | Path,
-    voice: str = DEFAULT_VOICE,
-    language: str = DEFAULT_LANGUAGE,
-    model: str = DEFAULT_MODEL,
-) -> Path:
-    """Synthesise speech via Gradium and write WAV to out_path."""
+async def stt_async(audio_bytes: bytes, content_type: str | None = None) -> str:
+    wav = _ensure_wav(audio_bytes, content_type)
+    setup = STTSetup(model_name=DEFAULT_MODEL, input_format="wav")
+    result = await _client().stt(setup, wav)
+    return result.text or ""
+
+
+async def tts_async(text: str, voice_id: str | None = None) -> bytes:
+    setup = {
+        "model_name": DEFAULT_MODEL,
+        "voice_id": voice_id or DEFAULT_VOICE_ID,
+        "output_format": "wav",
+    }
+    result = await _client().tts(setup=setup, text=text)
+    return result.raw_data
+
+
+def stt(audio_bytes: bytes, content_type: str | None = None) -> str:
+    return asyncio.run(stt_async(audio_bytes, content_type))
+
+
+def tts(text: str, out_path: str | Path, voice_id: str | None = None) -> Path:
     out_path = Path(out_path)
-    headers = {
-        "Authorization": f"Bearer {_api_key()}",
-        "Content-Type": "application/json",
-    }
-    body = {
-        "text": text,
-        "voice": voice,
-        "language": language,
-        "model": model,
-    }
-    with httpx.stream(
-        "POST",
-        f"{GRADIUM_BASE}/tts",
-        headers=headers,
-        json=body,
-        timeout=60.0,
-    ) as resp:
-        resp.raise_for_status()
-        out_path.parent.mkdir(parents=True, exist_ok=True)
-        with out_path.open("wb") as fh:
-            for chunk in resp.iter_bytes():
-                if chunk:
-                    fh.write(chunk)
+    data = asyncio.run(tts_async(text, voice_id))
+    out_path.parent.mkdir(parents=True, exist_ok=True)
+    out_path.write_bytes(data)
     return out_path

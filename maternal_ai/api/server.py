@@ -1,19 +1,23 @@
-"""FastAPI service exposing /checkin and /tts endpoints.
+"""FastAPI service exposing /checkin (text) and /voice (audio in+out).
 
-Mirrors the contract proposed in BUILD_PLAN.md so the Next.js
-front-end the team is building can talk to this backend without
-adapter glue.
+The /voice endpoint is the demo path: browser sends a webm/opus blob
+from MediaRecorder, the server converts to WAV with ffmpeg, calls
+Gradium STT, runs the FSM + LLM, calls Gradium TTS, and returns the
+JSON triage result with a base64-encoded WAV reply embedded so the
+browser can play it back without a second round-trip.
 """
 
 from __future__ import annotations
 
+import asyncio
+import base64
 import os
 from pathlib import Path
 from typing import Optional
 
 from fastapi import FastAPI, HTTPException, UploadFile, File, Form
 from fastapi.middleware.cors import CORSMiddleware
-from fastapi.responses import FileResponse, JSONResponse
+from fastapi.responses import FileResponse
 from fastapi.staticfiles import StaticFiles
 from pydantic import BaseModel
 
@@ -59,47 +63,61 @@ def list_states() -> dict:
     }
 
 
+async def _maybe_embed_tts(result_dict: dict) -> dict:
+    """Synthesise the assistant text with Gradium and base64-embed it."""
+    text = result_dict.get("assistantText", "")
+    if not text:
+        return result_dict
+    try:
+        wav_bytes = await voice_io.tts_async(text)
+        result_dict["assistantAudio"] = {
+            "mime": "audio/wav",
+            "base64": base64.b64encode(wav_bytes).decode("ascii"),
+        }
+    except Exception as exc:  # noqa: BLE001
+        result_dict["assistantAudio"] = {"error": str(exc)}
+    return result_dict
+
+
 @app.post("/checkin")
-def checkin_text(req: CheckinRequest) -> dict:
+async def checkin_text(req: CheckinRequest) -> dict:
     if req.state_id not in protocol.states:
         raise HTTPException(404, f"unknown state: {req.state_id}")
-    audio_out = AUDIO_DIR / f"{req.state_id}.wav" if req.speak else None
     result = checkin(
         protocol=protocol,
         state_id=req.state_id,
         transcript=req.transcript,
         memory_context=req.memory_context or "No prior check-ins.",
-        speak=req.speak,
-        audio_out=audio_out,
     )
-    return result.to_dict()
+    out = result.to_dict()
+    if req.speak:
+        out = await _maybe_embed_tts(out)
+    return out
 
 
-@app.post("/checkin_audio")
-async def checkin_audio(
+@app.post("/voice")
+async def voice_turn(
     state_id: str = Form(...),
     audio: UploadFile = File(...),
     memory_context: str = Form("No prior check-ins."),
-    speak: bool = Form(False),
 ) -> dict:
+    """End-to-end voice turn: audio in, JSON + assistant audio out."""
     if state_id not in protocol.states:
         raise HTTPException(404, f"unknown state: {state_id}")
-    tmp_in = AUDIO_DIR / f"in_{state_id}.wav"
-    tmp_in.write_bytes(await audio.read())
+    raw = await audio.read()
     try:
-        transcript = voice_io.stt(tmp_in)
+        transcript = await voice_io.stt_async(raw, audio.content_type)
     except Exception as exc:  # noqa: BLE001
         raise HTTPException(502, f"Gradium STT failed: {exc}")
-    audio_out = AUDIO_DIR / f"out_{state_id}.wav" if speak else None
+    if not transcript.strip():
+        raise HTTPException(400, "STT returned empty transcript")
     result = checkin(
         protocol=protocol,
         state_id=state_id,
         transcript=transcript,
         memory_context=memory_context,
-        speak=speak,
-        audio_out=audio_out,
     )
-    return result.to_dict()
+    return await _maybe_embed_tts(result.to_dict())
 
 
 @app.get("/audio/{name}")

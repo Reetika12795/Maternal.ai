@@ -1,233 +1,269 @@
 <!DOCTYPE html>
 <html lang="en">
 <head>
-  <meta charset="UTF-8" />
-  <meta name="viewport" content="width=device-width, initial-scale=1.0" />
-  <title>Maternal IA - protocol-bound maternal follow-up</title>
-  <style>
-    :root {
-      --paper: #f7f3ed;
-      --paper-soft: #efe9df;
-      --ink: #1d1c1a;
-      --ink-soft: #4a4744;
-      --accent: #c2410c;
-      --green: #166534;
-      --yellow: #b45309;
-      --red: #b91c1c;
-      --line: #d8cfc1;
-    }
-    * { box-sizing: border-box; }
-    body {
-      margin: 0;
-      font-family: -apple-system, Inter, system-ui, sans-serif;
-      background: var(--paper);
-      color: var(--ink);
-      min-height: 100vh;
-    }
-    header {
-      padding: 24px 32px;
-      border-bottom: 1px solid var(--line);
-      display: flex;
-      justify-content: space-between;
-      align-items: baseline;
-    }
-    header h1 {
-      margin: 0;
-      font-size: 22px;
-      font-weight: 500;
-      letter-spacing: -0.02em;
-    }
-    header .meta {
-      font-size: 12px;
-      color: var(--ink-soft);
-      text-transform: uppercase;
-      letter-spacing: 0.08em;
-    }
-    main {
-      max-width: 880px;
-      margin: 0 auto;
-      padding: 32px;
-      display: grid;
-      gap: 24px;
-    }
-    .row { display: grid; gap: 12px; }
-    label { font-size: 13px; color: var(--ink-soft); }
-    select, textarea, button {
-      font: inherit;
-      border: 1px solid var(--line);
-      border-radius: 6px;
-      padding: 10px 12px;
-      background: white;
-      color: var(--ink);
-    }
-    textarea { min-height: 100px; resize: vertical; }
-    button {
-      background: var(--ink);
-      color: var(--paper);
-      cursor: pointer;
-      border: 0;
-      padding: 12px 18px;
-      font-weight: 500;
-    }
-    button:disabled { opacity: 0.5; cursor: wait; }
-    button.secondary { background: var(--paper-soft); color: var(--ink); border: 1px solid var(--line); }
-    .badge {
-      display: inline-block;
-      padding: 4px 10px;
-      border-radius: 999px;
-      font-size: 12px;
-      font-weight: 600;
-      letter-spacing: 0.06em;
-      text-transform: uppercase;
-    }
-    .badge.green { background: #dcfce7; color: var(--green); }
-    .badge.yellow { background: #fef3c7; color: var(--yellow); }
-    .badge.red { background: #fee2e2; color: var(--red); }
-    .card {
-      background: white;
-      border: 1px solid var(--line);
-      border-radius: 8px;
-      padding: 18px 20px;
-    }
-    .card h3 {
-      margin: 0 0 8px;
-      font-size: 13px;
-      letter-spacing: 0.08em;
-      text-transform: uppercase;
-      color: var(--ink-soft);
-      font-weight: 600;
-    }
-    .card p { margin: 0 0 8px; line-height: 1.5; }
-    .followups li { margin-bottom: 6px; }
-    .summary pre {
-      background: var(--paper-soft);
-      padding: 12px;
-      border-radius: 6px;
-      overflow-x: auto;
-      font-size: 12px;
-    }
-    .examples { display: flex; gap: 8px; flex-wrap: wrap; }
-    .examples button {
-      background: var(--paper-soft);
-      color: var(--ink);
-      border: 1px solid var(--line);
-      padding: 6px 10px;
-      font-size: 12px;
-      font-weight: 500;
-    }
-  </style>
+<meta charset="utf-8" />
+<title>Maternal IA - Voice Check-in</title>
+<meta name="viewport" content="width=device-width,initial-scale=1" />
+<style>
+  :root {
+    --bg: #09090b;
+    --card: #18181b;
+    --border: #27272a;
+    --text: #fafafa;
+    --muted: #a1a1aa;
+    --green: #16a34a;
+    --yellow: #ca8a04;
+    --red: #dc2626;
+  }
+  * { box-sizing: border-box; }
+  body {
+    margin: 0; padding: 24px;
+    background: var(--bg); color: var(--text);
+    font-family: 'Inter', system-ui, -apple-system, sans-serif;
+    min-height: 100vh;
+  }
+  .wrap { max-width: 760px; margin: 0 auto; }
+  h1 { font-size: 22px; font-weight: 600; margin: 0 0 4px; }
+  .sub { color: var(--muted); font-size: 14px; margin-bottom: 24px; }
+  .card {
+    background: var(--card); border: 1px solid var(--border);
+    border-radius: 8px; padding: 20px; margin-bottom: 16px;
+  }
+  label { display: block; font-size: 12px; color: var(--muted); margin-bottom: 6px; text-transform: uppercase; letter-spacing: 0.05em; }
+  select, textarea, input {
+    width: 100%; background: var(--bg); color: var(--text);
+    border: 1px solid var(--border); border-radius: 6px;
+    padding: 10px 12px; font-family: inherit; font-size: 14px;
+  }
+  textarea { min-height: 80px; resize: vertical; }
+  .row { display: flex; gap: 12px; flex-wrap: wrap; margin-top: 12px; }
+  button {
+    background: var(--text); color: var(--bg);
+    border: none; border-radius: 6px; padding: 10px 18px;
+    font-weight: 500; cursor: pointer; font-family: inherit; font-size: 14px;
+  }
+  button.ghost { background: transparent; color: var(--text); border: 1px solid var(--border); }
+  button:disabled { opacity: 0.4; cursor: not-allowed; }
+  button.rec { background: var(--red); color: white; }
+  button.stop { background: var(--yellow); color: var(--bg); }
+  pre {
+    background: var(--bg); border: 1px solid var(--border);
+    border-radius: 6px; padding: 14px; overflow-x: auto;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    white-space: pre-wrap; word-break: break-word;
+  }
+  .triage {
+    display: inline-block; padding: 4px 10px; border-radius: 4px;
+    font-family: 'JetBrains Mono', monospace; font-size: 12px;
+    text-transform: uppercase; letter-spacing: 0.05em;
+  }
+  .triage.green { background: var(--green); color: white; }
+  .triage.yellow { background: var(--yellow); color: var(--bg); }
+  .triage.red { background: var(--red); color: white; }
+  .status { font-family: 'JetBrains Mono', monospace; font-size: 12px; color: var(--muted); margin-top: 8px; }
+  .turn { padding: 10px 0; border-bottom: 1px solid var(--border); }
+  .turn:last-child { border-bottom: none; }
+  .turn .who { font-size: 11px; color: var(--muted); text-transform: uppercase; letter-spacing: 0.05em; }
+  .turn .text { font-size: 14px; margin-top: 4px; }
+</style>
 </head>
 <body>
-  <header>
-    <h1>Maternal IA</h1>
-    <span class="meta">protocol-bound maternal follow-up</span>
-  </header>
-  <main>
-    <section class="row">
-      <label for="state">Maternal state</label>
-      <select id="state"></select>
-    </section>
+<div class="wrap">
+  <h1>Maternal IA - Voice Check-in</h1>
+  <div class="sub">VoxPath FSM + Gradium voice + OpenAI reasoning. Deterministic triage with clinician escalation on red.</div>
 
-    <section class="row">
-      <label for="transcript">User transcript (typed for demo, audio later)</label>
-      <textarea id="transcript" placeholder="Type what the mother says..."></textarea>
-      <div class="examples">
-        <button data-example="green">Green example</button>
-        <button data-example="yellow">Yellow example</button>
-        <button data-example="red">Red example</button>
-      </div>
-    </section>
+  <div class="card">
+    <label>Check-in state</label>
+    <select id="state"></select>
 
-    <section class="row">
-      <button id="run">Run check-in</button>
-    </section>
+    <div class="row">
+      <button id="rec" class="rec">Hold to talk</button>
+      <button id="stop" class="stop" disabled>Stop</button>
+      <button id="reset" class="ghost">Reset memory</button>
+    </div>
+    <div class="status" id="status">Ready.</div>
+  </div>
 
-    <section id="result" class="row" hidden>
-      <div class="card">
-        <h3>Triage</h3>
-        <p><span id="badge" class="badge"></span> <span id="overridden" style="font-size:12px;color:var(--ink-soft);"></span></p>
-      </div>
-      <div class="card">
-        <h3>Assistant</h3>
-        <p id="assistant"></p>
-        <ul id="followups" class="followups"></ul>
-      </div>
-      <div class="card summary" id="docsummary-card" hidden>
-        <h3>Doctor summary</h3>
-        <pre id="docsummary"></pre>
-      </div>
-    </section>
-  </main>
+  <div class="card">
+    <label>Text fallback</label>
+    <textarea id="text" placeholder="Type what the patient says..."></textarea>
+    <div class="row">
+      <button id="send">Send text + speak reply</button>
+    </div>
+  </div>
 
-  <script>
-    const API = location.origin;
-    const EXAMPLES = {
-      green: { state: "s1_positive_test", text: "I feel nauseous in the morning and I want to know if I should eat differently." },
-      yellow: { state: "s7_emotional_adjustment", text: "I cry almost every day and I feel overwhelmed, but I do not want to hurt myself or the baby." },
-      red: { state: "s4_risk_detection", text: "I have a terrible headache, my vision is blurry, and my hands and face are swollen." },
-    };
+  <div class="card" id="conv-card" style="display:none">
+    <label>Conversation</label>
+    <div id="conv"></div>
+  </div>
 
-    async function loadStates() {
-      const r = await fetch(API + "/states");
-      const data = await r.json();
-      const sel = document.getElementById("state");
-      sel.innerHTML = data.states.map(s => `<option value="${s.id}">${s.label} (${s.phase})</option>`).join("");
-    }
+  <div class="card" id="result-card" style="display:none">
+    <label>Triage</label>
+    <div id="triage-badge"></div>
+    <div style="margin-top:14px"><label>Raw response</label><pre id="raw"></pre></div>
+  </div>
+</div>
 
-    async function run() {
-      const btn = document.getElementById("run");
-      btn.disabled = true;
-      btn.textContent = "Running...";
-      try {
-        const state_id = document.getElementById("state").value;
-        const transcript = document.getElementById("transcript").value;
-        const r = await fetch(API + "/checkin", {
-          method: "POST",
-          headers: { "Content-Type": "application/json" },
-          body: JSON.stringify({ state_id, transcript }),
-        });
-        const data = await r.json();
-        render(data);
-      } catch (err) {
-        alert("Error: " + err.message);
-      } finally {
-        btn.disabled = false;
-        btn.textContent = "Run check-in";
-      }
-    }
+<audio id="player" hidden></audio>
 
-    function render(data) {
-      document.getElementById("result").hidden = false;
-      const badge = document.getElementById("badge");
-      badge.className = "badge " + data.triage.final;
-      badge.textContent = data.triage.final;
-      const overridden = document.getElementById("overridden");
-      if (data.triage.overridden) {
-        overridden.textContent = `(LLM said ${data.triage.llm}, deterministic rule fired: ${data.triage.deterministic})`;
-      } else {
-        overridden.textContent = "";
-      }
-      document.getElementById("assistant").textContent = data.assistantText;
-      const ul = document.getElementById("followups");
-      ul.innerHTML = (data.followUpQuestions || []).map(q => `<li>${q}</li>`).join("");
-      if (data.doctorSummary && data.doctorSummary.needed) {
-        document.getElementById("docsummary-card").hidden = false;
-        document.getElementById("docsummary").textContent = JSON.stringify(data.doctorSummary, null, 2);
-      } else {
-        document.getElementById("docsummary-card").hidden = true;
-      }
-    }
+<script>
+const els = {
+  state: document.getElementById('state'),
+  rec: document.getElementById('rec'),
+  stop: document.getElementById('stop'),
+  reset: document.getElementById('reset'),
+  send: document.getElementById('send'),
+  text: document.getElementById('text'),
+  status: document.getElementById('status'),
+  conv: document.getElementById('conv'),
+  convCard: document.getElementById('conv-card'),
+  resultCard: document.getElementById('result-card'),
+  badge: document.getElementById('triage-badge'),
+  raw: document.getElementById('raw'),
+  player: document.getElementById('player'),
+};
 
-    document.getElementById("run").addEventListener("click", run);
-    document.querySelectorAll(".examples button").forEach(b => {
-      b.addEventListener("click", () => {
-        const ex = EXAMPLES[b.dataset.example];
-        document.getElementById("state").value = ex.state;
-        document.getElementById("transcript").value = ex.text;
-      });
+let memory = [];
+let mediaRecorder = null;
+let chunks = [];
+
+function setStatus(msg) { els.status.textContent = msg; }
+
+function memoryString() {
+  if (!memory.length) return "No prior check-ins.";
+  return memory.slice(-6).map((t, i) => `Turn ${i+1} [${t.role}]: ${t.text}`).join("\n");
+}
+
+function pushTurn(role, text) {
+  memory.push({ role, text });
+  els.convCard.style.display = '';
+  const div = document.createElement('div');
+  div.className = 'turn';
+  div.innerHTML = `<div class="who">${role}</div><div class="text"></div>`;
+  div.querySelector('.text').textContent = text;
+  els.conv.appendChild(div);
+}
+
+function renderResult(data) {
+  els.resultCard.style.display = '';
+  const tri = data.triage || {};
+  const t = (tri.final || 'green').toLowerCase();
+  els.badge.innerHTML = `<span class="triage ${t}">${t}</span>` +
+    (tri.overridden ? ' <span style="color:var(--muted);font-size:12px;margin-left:8px">deterministic override</span>' : '');
+  const copy = { ...data };
+  if (copy.assistantAudio) copy.assistantAudio = '[' + (copy.assistantAudio.base64 ? copy.assistantAudio.base64.length + ' b64 chars' : copy.assistantAudio.error) + ']';
+  els.raw.textContent = JSON.stringify(copy, null, 2);
+}
+
+function playB64Wav(b64) {
+  const bin = atob(b64);
+  const bytes = new Uint8Array(bin.length);
+  for (let i = 0; i < bin.length; i++) bytes[i] = bin.charCodeAt(i);
+  const blob = new Blob([bytes], { type: 'audio/wav' });
+  els.player.src = URL.createObjectURL(blob);
+  els.player.play().catch(e => setStatus('Autoplay blocked: ' + e.message));
+}
+
+async function loadStates() {
+  const r = await fetch('/states');
+  const j = await r.json();
+  for (const s of j.states) {
+    const o = document.createElement('option');
+    o.value = s.id;
+    o.textContent = `${s.id} - ${s.label} (${s.phase})`;
+    els.state.appendChild(o);
+  }
+}
+
+async function sendText() {
+  const transcript = els.text.value.trim();
+  if (!transcript) return;
+  pushTurn('patient', transcript);
+  setStatus('Thinking...');
+  els.send.disabled = true;
+  try {
+    const r = await fetch('/checkin', {
+      method: 'POST',
+      headers: { 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        state_id: els.state.value,
+        transcript,
+        memory_context: memoryString(),
+        speak: true,
+      }),
     });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || r.statusText);
+    pushTurn('assistant', j.assistantText);
+    renderResult(j);
+    if (j.assistantAudio && j.assistantAudio.base64) playB64Wav(j.assistantAudio.base64);
+    setStatus('Done.');
+    els.text.value = '';
+  } catch (e) {
+    setStatus('Error: ' + e.message);
+  } finally {
+    els.send.disabled = false;
+  }
+}
 
-    loadStates();
-  </script>
-</body>
-</html>
+async function startRec() {
+  try {
+    const stream = await navigator.mediaDevices.getUserMedia({ audio: true });
+    chunks = [];
+    const mime = MediaRecorder.isTypeSupported('audio/webm') ? 'audio/webm' : '';
+    mediaRecorder = new MediaRecorder(stream, mime ? { mimeType: mime } : {});
+    mediaRecorder.ondataavailable = e => { if (e.data.size > 0) chunks.push(e.data); };
+    mediaRecorder.onstop = onStopped;
+    mediaRecorder.start();
+    setStatus('Recording... speak now.');
+    els.rec.disabled = true;
+    els.stop.disabled = false;
+  } catch (e) {
+    setStatus('Mic error: ' + e.message);
+  }
+}
+
+function stopRec() {
+  if (mediaRecorder && mediaRecorder.state !== 'inactive') {
+    mediaRecorder.stop();
+    mediaRecorder.stream.getTracks().forEach(t => t.stop());
+  }
+  els.stop.disabled = true;
+}
+
+async function onStopped() {
+  const blob = new Blob(chunks, { type: chunks[0]?.type || 'audio/webm' });
+  setStatus('Transcribing + reasoning...');
+  const fd = new FormData();
+  fd.append('state_id', els.state.value);
+  fd.append('memory_context', memoryString());
+  fd.append('audio', blob, 'turn.webm');
+  try {
+    const r = await fetch('/voice', { method: 'POST', body: fd });
+    const j = await r.json();
+    if (!r.ok) throw new Error(j.detail || r.statusText);
+    pushTurn('patient', j.transcript);
+    pushTurn('assistant', j.assistantText);
+    renderResult(j);
+    if (j.assistantAudio && j.assistantAudio.base64) playB64Wav(j.assistantAudio.base64);
+    setStatus('Done.');
+  } catch (e) {
+    setStatus('Error: ' + e.message);
+  } finally {
+    els.rec.disabled = false;
+  }
+}
+
+els.rec.addEventListener('click', startRec);
+els.stop.addEventListener('click', stopRec);
+els.send.addEventListener('click', sendText);
+els.reset.addEventListener('click', () => {
+  memory = [];
+  els.conv.innerHTML = '';
+  els.convCard.style.display = 'none';
+  els.resultCard.style.display = 'none';
+  setStatus('Memory cleared.');
+});
+
+loadStates();
+</script></body></html>
